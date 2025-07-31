@@ -1,6 +1,7 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
@@ -49,8 +50,13 @@ module.exports = (env, argv) => {
       },
       plugins: [
         ...(isProduction ? [new CleanWebpackPlugin({
-          cleanOnceBeforeBuildPatterns: ['**/*', '!templates.esm.js', '!templates.umd.js']
-        })] : [])
+          cleanOnceBeforeBuildPatterns: ['**/*', '!templates.esm.js', '!templates.umd.js', '!template.js']
+        })] : []),
+        new CopyPlugin({
+          patterns: [
+            { from: 'src/template.js', to: 'template.js' }
+          ]
+        })
       ]
     },
     // ESM build
@@ -65,7 +71,14 @@ module.exports = (env, argv) => {
       },
       experiments: {
         outputModule: true
-      }
+      },
+      plugins: [
+        new CopyPlugin({
+          patterns: [
+            { from: 'src/template.js', to: 'template.js' }
+          ]
+        })
+      ]
     },
     // UMD build for browser usage
     {
@@ -78,7 +91,14 @@ module.exports = (env, argv) => {
           type: 'umd'
         },
         globalObject: 'this'
-      }
+      },
+      plugins: [
+        new CopyPlugin({
+          patterns: [
+            { from: 'src/template.js', to: 'template.js' }
+          ]
+        })
+      ]
     }
   ];
 }; 
