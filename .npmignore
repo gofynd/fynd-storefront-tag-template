@@ -1,0 +1,40 @@
+# Source files (only distribute built files)
+src/
+
+# Development files
+.github/
+examples/
+webpack.config.js
+.babelrc
+.gitignore
+.npmignore
+
+# Build files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+
+# Documentation source
+docs/
+*.md
+!README.md 
