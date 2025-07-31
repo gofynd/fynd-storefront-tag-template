@@ -2,7 +2,7 @@
  * Fynd Storefront Tag Templates
  * 
  * A collection of pre-configured tag templates for Fynd Platform storefronts
- * @module @fynd/storefront-tag-templates
+ * @module @gofynd/storefront-tag-templates
  */
 
 const templates = require('./template');

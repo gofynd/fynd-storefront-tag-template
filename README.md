@@ -19,36 +19,36 @@ Each template includes:
 
 ### NPM
 ```bash
-npm install @fynd/storefront-tag-templates
+npm install @gofynd/storefront-tag-templates
 ```
 
 ### Yarn
 ```bash
-yarn add @fynd/storefront-tag-templates
+yarn add @gofynd/storefront-tag-templates
 ```
 
 ### CDN
 ```html
-<script src="https://unpkg.com/@fynd/storefront-tag-templates/dist/templates.umd.js"></script>
+<script src="https://unpkg.com/@gofynd/storefront-tag-templates/dist/templates.umd.js"></script>
 ```
 
 ## 📖 Usage
 
 ### CommonJS
 ```javascript
-const templates = require('@fynd/storefront-tag-templates');
+const templates = require('@gofynd/storefront-tag-templates');
 console.log(templates.gtm);
 ```
 
 ### ES6 Modules
 ```javascript
-import templates from '@fynd/storefront-tag-templates';
+import templates from '@gofynd/storefront-tag-templates';
 console.log(templates.gtm);
 ```
 
 ### Browser
 ```html
-<script src="https://unpkg.com/@fynd/storefront-tag-templates/dist/templates.umd.js"></script>
+<script src="https://unpkg.com/@gofynd/storefront-tag-templates/dist/templates.umd.js"></script>
 <script>
   console.log(window.FyndStorefrontTemplates.gtm);
 </script>

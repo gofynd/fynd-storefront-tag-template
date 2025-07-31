@@ -1,5 +1,5 @@
 {
-  "name": "@fynd/storefront-tag-templates",
+  "name": "@gofynd/storefront-tag-templates",
   "version": "1.0.0",
   "description": "A collection of tag templates for Fynd Platform storefronts including Google Tag Manager, Sentry, and Google Analytics integrations",
   "main": "dist/templates.js",

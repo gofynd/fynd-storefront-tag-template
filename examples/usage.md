@@ -16,10 +16,10 @@ This guide provides comprehensive examples of how to use the Fynd Storefront Tag
 
 ```javascript
 // CommonJS
-const templates = require('@fynd/storefront-tag-templates');
+const templates = require('@gofynd/storefront-tag-templates');
 
 // ES6 Modules
-import templates from '@fynd/storefront-tag-templates';
+import templates from '@gofynd/storefront-tag-templates';
 
 // Destructuring specific templates
 const { gtm, sentry, ga4 } = templates;
