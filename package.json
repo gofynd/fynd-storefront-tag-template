@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/fynd-storefront-tag-template.git"
+    "url": "git+https://github.com/gofynd/fynd-storefront-tag-template.git"
   },
   "keywords": [
     "fynd",
@@ -37,12 +37,12 @@
     "ecommerce",
     "tracking"
   ],
-  "author": "Your Name",
+  "author": "Fynd Platform",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/yourusername/fynd-storefront-tag-template/issues"
+    "url": "https://github.com/gofynd/fynd-storefront-tag-template/issues"
   },
-  "homepage": "https://github.com/yourusername/fynd-storefront-tag-template#readme",
+  "homepage": "https://github.com/gofynd/fynd-storefront-tag-template#readme",
   "devDependencies": {
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",

@@ -134,7 +134,7 @@ See the [Template Configuration Guide](./src/template.js) for complete documenta
 ### Setup
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/fynd-storefront-tag-template.git
+git clone https://github.com/gofynd/fynd-storefront-tag-template.git
 
 # Install dependencies
 npm install
@@ -193,7 +193,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For issues and feature requests, please [open an issue](https://github.com/yourusername/fynd-storefront-tag-template/issues).
+For issues and feature requests, please [open an issue](https://github.com/gofynd/fynd-storefront-tag-template/issues).
 
 ---
 

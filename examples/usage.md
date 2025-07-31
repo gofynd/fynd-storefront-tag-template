@@ -483,6 +483,6 @@ script: `
 ## Support
 
 For more examples and support:
-- [GitHub Repository](https://github.com/yourusername/fynd-storefront-tag-template)
+- [GitHub Repository](https://github.com/gofynd/fynd-storefront-tag-template)
 - [Fynd Platform Docs](https://platform.fynd.com/docs)
-- [Issue Tracker](https://github.com/yourusername/fynd-storefront-tag-template/issues) 
+- [Issue Tracker](https://github.com/gofynd/fynd-storefront-tag-template/issues) 

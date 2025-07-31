@@ -33,10 +33,7 @@ module.exports = (env, argv) => {
           extractComments: false,
         })
       ]
-    },
-    plugins: [
-      new CleanWebpackPlugin()
-    ]
+    }
   };
 
   return [
@@ -49,7 +46,12 @@ module.exports = (env, argv) => {
         library: {
           type: 'commonjs2'
         }
-      }
+      },
+      plugins: [
+        ...(isProduction ? [new CleanWebpackPlugin({
+          cleanOnceBeforeBuildPatterns: ['**/*', '!templates.esm.js', '!templates.umd.js']
+        })] : [])
+      ]
     },
     // ESM build
     {
