@@ -5,6 +5,14 @@
   "main": "dist/templates.js",
   "module": "dist/templates.esm.js",
   "types": "dist/templates.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/templates.js",
+      "import": "./dist/templates.esm.js",
+      "default": "./dist/templates.js"
+    },
+    "./dist/template": "./dist/template.js"
+  },
   "files": [
     "dist",
     "src",
@@ -16,7 +24,7 @@
     "build:dev": "webpack --mode development",
     "watch": "webpack --mode development --watch",
     "clean": "rm -rf dist",
-    "prepare": "npm run build",
+    "prepublishOnly": "npm run build",
     "test": "echo \"No tests specified\" && exit 0",
     "lint": "eslint src/**/*.js",
     "format": "prettier --write \"src/**/*.js\""

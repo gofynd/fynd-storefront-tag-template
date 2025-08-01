@@ -49,9 +49,6 @@ module.exports = (env, argv) => {
         }
       },
       plugins: [
-        ...(isProduction ? [new CleanWebpackPlugin({
-          cleanOnceBeforeBuildPatterns: ['**/*', '!templates.esm.js', '!templates.umd.js', '!template.js']
-        })] : []),
         new CopyPlugin({
           patterns: [
             { from: 'src/template.js', to: 'template.js' }
