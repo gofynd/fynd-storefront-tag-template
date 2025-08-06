@@ -271,7 +271,235 @@ const templates = {
       ],
       script: `(function(){const script=document.createElement("script");script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id={{measurementId}}';script.onload=()=>{window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","{{measurementId}}");};document.head.appendChild(script);}).call(this);`
     },
-    
+    amplitude: {
+      name: "Amplitude",
+      path: "amplitude-tag",
+      description: "Track user behavior and analyze product analytics with Amplitude.",
+      img: "https://cdn.brandfetch.io/idJfYlnlFP/w/400/h/400/theme/dark/icon.png?k=bfHSJFAPEG",
+      note: "**Important:** You'll need your Amplitude API Key from your project settings. For EU data residency, make sure to select the EU server zone and use an API key from an Amplitude EU project.",
+      help_link: {
+        text: "Learn more about Amplitude setup and configuration in the",
+        url: "https://www.docs.developers.amplitude.com/data/sdks/browser-2/",
+        label: "Amplitude Documentation"
+      },
+      template_id: "1004",
+      template_version: "1.0.0",
+      type: "js",
+      sub_type: "inline",
+      position: "head",
+      pages: [],
+      attributes: {
+        async: "true"
+      },
+      compatible_engines: ["react", "vue2"],
+      field_mappings: {
+        apiKey: "amplitude_api_key",
+        serverZone: "server_zone",
+        userId: "user_id",
+        appVersion: "app_version",
+        sessionTimeout: "session_timeout",
+        includeReferrer: "include_referrer",
+        includeUtm: "include_utm",
+        trackPageViews: "track_page_views",
+        trackSessions: "track_sessions",
+        trackFormInteractions: "track_form_interactions",
+        trackFileDownloads: "track_file_downloads"
+      },
+      layout: {
+        columns: 2,
+        gap: "24px"
+      },
+      fields: [
+        {
+          name: "apiKey",
+          type: "text",
+          label: "API Key",
+          placeholder: "Enter your Amplitude API Key",
+          required: true,
+          size: "full",
+          validation: {
+            pattern: "^[a-f0-9]{32}$",
+            message: "API Key must be a 32-character hexadecimal string"
+          }
+        },
+        {
+          name: "serverZone",
+          type: "select",
+          label: "Server Zone",
+          required: false,
+          size: "medium",
+          default: "US",
+          options: [
+            {
+              label: "United States (Default)",
+              value: "US"
+            },
+            {
+              label: "European Union",
+              value: "EU"
+            }
+          ],
+          description: "Choose EU only if your Amplitude project was created in the EU data center"
+        },
+        {
+          name: "userId",
+          type: "text",
+          label: "Default User ID (Optional)",
+          placeholder: "e.g., {{user.id}} or leave empty",
+          required: false,
+          size: "medium",
+          description: "Set a default user ID. You can use template variables like {{user.id}}"
+        },
+        {
+          name: "appVersion",
+          type: "text",
+          label: "App Version (Optional)",
+          placeholder: "e.g., 1.0.0",
+          required: false,
+          size: "medium",
+          description: "Track your application version with events"
+        },
+        {
+          name: "sessionTimeout",
+          type: "number",
+          label: "Session Timeout (minutes)",
+          placeholder: "30",
+          required: false,
+          size: "medium",
+          default: 30,
+          validation: {
+            min: 1,
+            max: 1440,
+            message: "Session timeout must be between 1 and 1440 minutes"
+          },
+          description: "Minutes of inactivity before a new session starts"
+        },
+        {
+          name: "includeReferrer",
+          type: "checkbox",
+          label: "Track Referrer Information",
+          default: true,
+          size: "medium",
+          description: "Capture referrer and referring domain for each session"
+        },
+        {
+          name: "includeUtm",
+          type: "checkbox",
+          label: "Track UTM Parameters",
+          default: true,
+          size: "medium",
+          description: "Automatically capture UTM campaign parameters"
+        },
+        {
+          name: "trackPageViews",
+          type: "checkbox",
+          label: "Track Page Views",
+          default: true,
+          size: "medium",
+          description: "Automatically track page view events"
+        },
+        {
+          name: "trackSessions",
+          type: "checkbox",
+          label: "Track Sessions",
+          default: true,
+          size: "medium",
+          description: "Track session start and end events"
+        },
+        {
+          name: "trackFormInteractions",
+          type: "checkbox",
+          label: "Track Form Interactions",
+          default: false,
+          size: "medium",
+          description: "Track form start and submit events"
+        },
+        {
+          name: "trackFileDownloads",
+          type: "checkbox",
+          label: "Track File Downloads",
+          default: false,
+          size: "medium",
+          description: "Track file download events"
+        }
+      ],
+      script: `(function() {
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = '{{serverZone}}' === 'EU'
+      ? 'https://cdn.eu.amplitude.com/libs/analytics-browser-2.0.0-min.js.gz'
+      : 'https://cdn.amplitude.com/libs/analytics-browser-2.0.0-min.js.gz';
+  
+    script.onload = function() {
+      if (!window.amplitude) {
+        console.error('[Amplitude] Failed to load SDK');
+        return;
+      }
+  
+      const config = {
+        flushIntervalMillis: 1000,
+        flushQueueSize: 30,
+        defaultTracking: {
+          pageViews: {{trackPageViews}},
+          sessions: {{trackSessions}},
+          formInteractions: {{trackFormInteractions}},
+          fileDownloads: {{trackFileDownloads}}
+        },
+        attribution: {
+          disabled: false,
+          trackNewCampaigns: true
+        }
+      };
+  
+      if ('{{serverZone}}' === 'EU') {
+        config.serverZone = 'EU';
+      }
+  
+      const sessionTimeout = {{sessionTimeout}};
+      if (sessionTimeout) {
+        config.sessionTimeout = sessionTimeout * 60 * 1000;
+      }
+  
+      const appVersion = '{{appVersion}}'.trim();
+      if (appVersion) {
+        config.appVersion = appVersion;
+      }
+  
+      if ({{includeReferrer}}) {
+        config.attribution.trackPageViews = true;
+      }
+  
+      const userId = '{{userId}}'.trim();
+      if (userId) {
+        window.amplitude.init('{{apiKey}}', userId, config);
+      } else {
+        window.amplitude.init('{{apiKey}}', undefined, config);
+      }
+  
+      if ({{includeUtm}}) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const utmParams = {};
+        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(param => {
+          const value = urlParams.get(param);
+          if (value) {
+            utmParams[param] = value;
+          }
+        });
+        if (Object.keys(utmParams).length > 0) {
+          window.amplitude.setUserProperties(utmParams);
+        }
+      }
+    };
+  
+    script.onerror = function() {
+      console.error('[Amplitude] Failed to load SDK script');
+    };
+  
+    document.head.appendChild(script);
+  })();`
+  
+    }
   };
   
   // Working example to demonstrate array field with chips
