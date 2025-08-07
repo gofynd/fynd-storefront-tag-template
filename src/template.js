@@ -47,6 +47,8 @@
  * - validation: object - { pattern: RegExp, message: string }
  * - options: array - For select/multiselect type: [{ label, value }]
  * - searchable: boolean - For select/multiselect, enables search (default: false)
+ * - useTooltip: boolean - Shows description as tooltip vs text (default: true, except for array fields)
+ * - tooltipPosition: string - Position of tooltip: 'top', 'bottom', 'left', 'right' (default: 'top')
  * - input_config: object - For array type configuration
  *   - type: string - Input type (default: 'text')
  *   - placeholder: string - Input placeholder
@@ -68,501 +70,131 @@
  * - responsive: boolean - Enable responsive behavior
  */
 
-// Template structure helper
-const createTemplate = (config) => {
-    const defaults = {
-        type: 'js',
-        sub_type: 'inline',
-        position: 'head',
-        pages: [],
-        attributes: { async: "true" },
-        compatible_engines: ['react', 'vue2'],
-        field_mappings: {},
-        layout: { columns: 2, gap: '20px', responsive: true }
-    };
-    
-    return { ...defaults, ...config };
+// Import createTemplate helper
+const createTemplate = require('./utils/createTemplate');
+
+// Import individual templates
+const gtmTemplate = require('./templates/gtm');
+const sentryTemplate = require('./templates/sentry');
+const ga4Template = require('./templates/ga4');
+const amplitudeTemplate = require('./templates/amplitude');
+const adobeAnalyticsTemplate = require('./templates/adobeAnalytics');
+const mixpanelTemplate = require('./templates/mixpanel');
+const heapTemplate = require('./templates/heap');
+const adobeLaunchTemplate = require('./templates/adobeLaunch');
+const segmentTemplate = require('./templates/segment');
+const mparticleTemplate = require('./templates/mparticle');
+const hotjarTemplate = require('./templates/hotjar');
+const crazyeggTemplate = require('./templates/crazyegg');
+const fullstoryTemplate = require('./templates/fullstory');
+const mouseflowTemplate = require('./templates/mouseflow');
+const clevertapTemplate = require('./templates/clevertap');
+const moengageTemplate = require('./templates/moengage');
+const webengageTemplate = require('./templates/webengage');
+const pushengageTemplate = require('./templates/pushengage');
+
+// Available Templates:
+// - gtm: Google Tag Manager
+// - sentry: Sentry Error Tracking
+// - ga4: Google Analytics 4
+// - amplitude: Amplitude Product Analytics
+// - adobeAnalytics: Adobe Analytics
+// - mixpanel: Mixpanel Product Analytics
+// - heap: Heap Analytics
+// - adobeLaunch: Adobe Launch (Experience Platform Tags)
+// - segment: Segment Customer Data Platform
+// - mparticle: mParticle Customer Data Platform
+// - hotjar: Hotjar Behavior Analytics
+// - crazyegg: Crazy Egg Visual Analytics
+// - fullstory: FullStory Digital Experience Intelligence
+// - mouseflow: Mouseflow Website Analytics
+// - clevertap: CleverTap Customer Engagement Platform
+// - moengage: MoEngage Customer Engagement Platform
+// - webengage: WebEngage Retention Platform
+// - pushengage: PushEngage Web Push Notifications
+const templates = {
+  // Import all refactored templates
+  gtm: gtmTemplate,
+  sentry: sentryTemplate,
+  ga4: ga4Template,
+  amplitude: amplitudeTemplate,
+  adobeAnalytics: adobeAnalyticsTemplate,
+  mixpanel: mixpanelTemplate,
+  heap: heapTemplate,
+  adobeLaunch: adobeLaunchTemplate,
+  segment: segmentTemplate,
+  mparticle: mparticleTemplate,
+  hotjar: hotjarTemplate,
+  crazyegg: crazyeggTemplate,
+  fullstory: fullstoryTemplate,
+  mouseflow: mouseflowTemplate,
+  clevertap: clevertapTemplate,
+  moengage: moengageTemplate,
+  webengage: webengageTemplate,
+  pushengage: pushengageTemplate
 };
 
-const templates = {
-    gtm: createTemplate({
-      // Required keys
-      name: 'Google Tag Manager',
-      path: "google-tag-manager",
-      description: "Integrate Google Tag Manager for advanced analytics.",
-      template_id: "1001",
-      template_version: "1.0.0",
-      fields: [
-        {
-          name: 'gtmId',
-          type: 'text',
-          label: 'Enter Google Tag Manager ID',
-          placeholder: 'Enter GTM Tag',
-          required: true,
-          size: 'full',
-          validation: {
-            pattern: /^GTM-[A-Z0-9]+$/i,
-            message: 'Must be a valid GTM ID (e.g., GTM-XXXXXXX)',
-          },
-          events: {
-            // Auto-format GTM ID on blur
-            blur: function(value, field, formData, component) {
-              if (value && !value.startsWith('GTM-')) {
-                // If user enters just the ID part, add GTM- prefix
-                const cleanId = value.replace(/^gtm-/i, '').toUpperCase();
-                component.$set(formData, field.name, 'GTM-' + cleanId);
-              }
-            }
-          }
-        },
-      ],
-      script: `window.addEventListener("load",function(){(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:"gtm.js"});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!="dataLayer"?"&l="+l:"";j.async=true;j.src="https://www.googletagmanager.com/gtm.js?id="+i+dl;f.parentNode.insertBefore(j,f);})(window,document,"script","dataLayer","{{gtmId}}");});function consumeEvent(){const FPI_EVENTS={LOG_IN:"user.login",LOG_OUT:"user.logout",PROFILE_UPDATE:"user.update",PRODUCT_LIST_VIEW:"product_list.view",COLLECTION_LIST_VIEW:"collection_list.view",PRODUCT_LIST_CLICK:"product_list.click",PRODUCT_FILTER:"product_list.filter",PRODUCT_SORT:"product_list.sort",PRODUCT_DETAIL_PAGE_VIEW:"product.view",NOTIFY_PRODUCT:"notify.product",ADD_TO_COMPARE:"compare.add",REMOVE_FROM_COMPARE:"compare.remove",ADD_TO_WISHLIST:"wishlist.add",REMOVE_FROM_WISHLIST:"wishlist.remove",VIEW_CART:"cart.view",ADD_TO_CART:"cart.newProduct",REMOVE_FROM_CART:"cart.remove",UPDATE_CART:"cart.update",ORDER_CHECKOUT:"order.checkout",ADD_PAYMENT_INFORMATION:"order.payment_information",ADD_ADDRESS_INFORMATION:"order.address_information",ORDER_PROCESSED:"order.processed",ORDER_TRACKING_VIEW:"order_tracking.view",REFUND_SUCCESS:"refund.success",SEARCH_PRODUCTS:"search.products",PINCODE_SERVICEABILITY:"pincode.serviceablility"};const getGTMEventName=(event)=>{const GTM_EVENTS={[FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW]:"view_item",[FPI_EVENTS.ADD_TO_CART]:"add_to_cart",[FPI_EVENTS.REMOVE_FROM_CART]:"remove_from_cart",[FPI_EVENTS.ORDER_CHECKOUT]:"begin_checkout",[FPI_EVENTS.ORDER_PROCESSED]:"purchase",[FPI_EVENTS.REFUND_SUCCESS]:"refund",[FPI_EVENTS.PRODUCT_LIST_VIEW]:"view_item_list",[FPI_EVENTS.COLLECTION_LIST_VIEW]:"view_collection",[FPI_EVENTS.ADD_TO_WISHLIST]:"add_to_wishlist",[FPI_EVENTS.VIEW_CART]:"view_cart",[FPI_EVENTS.SEARCH_PRODUCTS]:"products_searched",[FPI_EVENTS.ADD_PAYMENT_INFORMATION]:"add_payment_info",[FPI_EVENTS.ADD_ADDRESS_INFORMATION]:"add_shipping_info",[FPI_EVENTS.LOG_IN]:"login",[FPI_EVENTS.LOG_OUT]:"logout",[FPI_EVENTS.PROFILE_UPDATE]:"profile_update"};return GTM_EVENTS[event]||"not_known";};const pushToDataLayer=(event,data)=>{const eventName=getGTMEventName(event);if(eventName==="not_known")return;dataLayer.push({ecommerce:null});data.userAgent=window.navigator.userAgent;dataLayer.push({event:eventName,ecommerce:data});};const getSkipEvents=()=>[];if(window.FPI){Object.keys(FPI_EVENTS).filter(ev=>!getSkipEvents().includes(FPI_EVENTS[ev])).forEach(event=>{FPI.event.on(FPI_EVENTS[event],eventData=>{console.log("FPI "+event);pushToDataLayer(FPI_EVENTS[event],eventData);});});}}consumeEvent();`,
-      
-      // Optional keys
-      img: "https://www.gstatic.com/analytics-suite/header/suite/v2/ic_tag_manager.svg",
-      note:"The GTM ID for your Google Tag Manager account is available on the Google Tag Manager Dashboard.",
-      field_mappings: {
-        gtmId: 'gtm_id'
-      },
-      layout: {
-        columns: 2,
-        gap: '20px'
-      },
-      // Custom save button state - only disable if form is invalid
-      saveButtonDisabled: function(formData, errors, component) {
-        // This uses the built-in form validation (computed property)
-        return !component.isFormValid;
-      }
-    }),
-    sentry: {
-      name: 'Sentry',
-      path: "sentry-tag",
-      description: "Monitor errors and performance with Sentry.",
-      img: "https://sentry-brand.storage.googleapis.com/sentry-logo-black.png",
-      note:"The DSN for your Sentry account is available on the Sentry Dashboard in Settings > Project > Client Keys (*this instructions needs to be changed according to Sentry documentation)",
-      help_link: {
-        text: "Learn the steps to connect with Sentry by reading the article on",
-        url: "https://docs.sentry.io/product/sentry-basics/",
-        label: "Help Center"
-      },
-      template_id: "1002",
-      template_version: "1.0.0",
-      type: 'js',
-      sub_type: 'inline',
-      position: 'head',
-      pages: [],
-      attributes: { async: "true" },
-      compatible_engines: ['react', 'vue2'],
-      field_mappings: {
-        dsn: 'sentry_dsn',
-        excludedUrls: 'excluded_urls'
-      },
-      layout: {
-        columns: 2,
-        gap: '24px'
-      },
-      fields: [
-        {
-          name: 'dsn',
-          type: 'text',
-          label: 'Enter Sentry DSN',
-          required: true,
-          size: 'full',
-          validation: {
-            pattern: /^https?:\/\/[\w.@:\/\-]+$/,
-            message: 'Must be a valid DSN URL',
-          },
-        },
-        {
-          name: 'excludedUrls',
-          type: 'array',
-          label: 'URLs to exclude',
-          description: 'We have by default added some URLs below, this is to avoid the errors that are reported from the core system. We recommend you to keep this as it is. You can add more URLs here to add to denyURLs in Sentry.',
-          help_link: {
-            url: "https://docs.sentry.io/platforms/javascript/configuration/filtering/",
-            text: "More info"
-          },
-          default: [
-          ],
-          size: 'full',
-          input_config: {
-            type: 'text',
-            placeholder: 'Enter URL to exclude',
-            button_text: 'Exclude URL',
-            input_size: 'large',  // Size for the input within array field
-            button_size: 'small', // Size for the button within array field
-            validation: {
-              pattern: /^(https?:\/\/)?(([a-z\d]([a-z\d-]*[a-z\d])*)\.)+[a-z]{2,}|((\d{1,3}\.){3}\d{1,3})(\:\d+)?(\/[-a-z\d%_.@~+]*)*(\?[;&a-z\d%_.~+=-]*)?(\#[-a-z\d_]*)?$/i,
-              message: 'Not a valid URL'
-            },
-            events: {
-              // Custom click handler - can be used for additional validation or logging
-              click: function(value, field, formData, component) {
-                console.log('Adding excluded URL:', value);
-                // The actual chip addition is handled by the default addArrayItem method
-                // You can add custom validation or processing here if needed
-              },
-              // Custom remove handler - optional notification when removing
-              remove: function(value, index, field, formData, component) {
-                console.log('Removed excluded URL:', value);
-                // The actual removal is handled by the default removeArrayItem method
-              }
-            }
-          }
-        },
-      ],
-      script: `(function() {
-                    const script = document.createElement('script');
-                    script.src = 'https://browser.sentry-cdn.com/9.35.0/bundle.tracing.min.js';
-                    script.integrity = 'sha384-XvcGe2ErrJucCsy3ffdT1rnrcilIPvF5GfEDumgaFnypaxiXyJqr4p4zdMfDrTcM';
-                    script.crossOrigin = 'anonymous';
-                    script.onload = () => {
-                        Sentry.init({
-                        dsn: '{{dsn}}',
-                        sendDefaultPii: true,
-                        integrations: [
-                            new Sentry.BrowserTracing(),
-                            new Sentry.Replay()
-                        ],
-                        tracesSampleRate: 1.0,
-                        replaysSessionSampleRate: 0.1,
-                        replaysOnErrorSampleRate: 1.0,
-                        denyUrls: [{{excludedUrls}}] || [],
-                        });
-                    };
-                    document.head.appendChild(script);
-                    })();`
+// Working example to demonstrate array field with chips
+const ARRAY_FIELD_EXAMPLE = {
+  name: 'arrayField',
+  type: 'array',
+  label: 'Example URLs',
+  description: 'Add URLs to the list',
+  default: ['https://example.com'],
+  size: 'full',
+  input_config: {
+    type: 'text',
+    placeholder: 'Enter URL',
+    button_text: 'Add URL',
+    input_size: 'large',
+    button_size: 'small',
+    validation: {
+      pattern: /^https?:\/\/.+/,
+      message: 'Must be a valid URL'
     },
-    ga4: {
-      name: 'Google Analytics',
-      path: "google-analytics",
-      description: "tracks and reports website traffic, providing insights to help optimize your site's performance.",
-      img: "https://cdn.pixelbin.io/v2/falling-surf-7c8bb8/fyndnp/wrkr/x5/misc/pictures/free-icon/original/iejFtwUQr-logo.png",
-      note:"The APP_ID for your Google Analytics account is available on the Google Analytics Dashboard in **Settings > App Settings > Account Settings > APP ID**.",
-      template_id: "1003",
-      template_version: "1.0.0",
-      type: 'js',
-      sub_type: 'inline',
-      position: 'head',
-      pages: [],
-      attributes: { async: "true" },
-      compatible_engines: ['react', 'vue2'],
-      field_mappings: {
-        measurementId: 'google_analytics_id'
+    events: {
+      // The click event is called BEFORE the item is added
+      // The actual addition is handled by addArrayItem
+      click: function(value, field, formData, component) {
+        console.log('Before adding:', value);
+        console.log('Current items:', formData[field.name]);
       },
-      layout: {
-        columns: 3,
-        gap: '16px',
-        responsive: true  // Enable responsive behavior
-      },
-      fields: [
-        {
-          name: 'measurementId',
-          type: 'text',
-          label: 'Enter Google Analytics Property ID',
-          placeholder: 'Enter Google Analytics Property ID',
-          required: true,
-          size: 'medium',
-          validation: {
-            pattern: /^(G-[A-Z0-9]+|UA-[0-9]+-[0-9]+)$/i,
-            message: 'Must be a valid Measurement ID (e.g., G-XXXXXXXXXX or UA-XXXXXXXXX-X)',
-          },
-        },
-      ],
-      script: `(function(){const script=document.createElement("script");script.async=true;script.src='https://www.googletagmanager.com/gtag/js?id={{measurementId}}';script.onload=()=>{window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","{{measurementId}}");};document.head.appendChild(script);}).call(this);`
-    },
-    amplitude: {
-      name: "Amplitude",
-      path: "amplitude-tag",
-      description: "Track user behavior and analyze product analytics with Amplitude.",
-      img: "https://cdn.brandfetch.io/idJfYlnlFP/w/400/h/400/theme/dark/icon.png?k=bfHSJFAPEG",
-      note: "**Important:** You'll need your Amplitude API Key from your project settings. For EU data residency, make sure to select the EU server zone and use an API key from an Amplitude EU project.",
-      help_link: {
-        text: "Learn more about Amplitude setup and configuration in the",
-        url: "https://www.docs.developers.amplitude.com/data/sdks/browser-2/",
-        label: "Amplitude Documentation"
-      },
-      template_id: "1004",
-      template_version: "1.0.0",
-      type: "js",
-      sub_type: "inline",
-      position: "head",
-      pages: [],
-      attributes: {
-        async: "true"
-      },
-      compatible_engines: ["react", "vue2"],
-      field_mappings: {
-        apiKey: "amplitude_api_key",
-        serverZone: "server_zone",
-        userId: "user_id",
-        appVersion: "app_version",
-        sessionTimeout: "session_timeout",
-        includeReferrer: "include_referrer",
-        includeUtm: "include_utm",
-        trackPageViews: "track_page_views",
-        trackSessions: "track_sessions",
-        trackFormInteractions: "track_form_interactions",
-        trackFileDownloads: "track_file_downloads"
-      },
-      layout: {
-        columns: 2,
-        gap: "24px"
-      },
-      fields: [
-        {
-          name: "apiKey",
-          type: "text",
-          label: "API Key",
-          placeholder: "Enter your Amplitude API Key",
-          required: true,
-          size: "full",
-          validation: {
-            pattern: "^[a-f0-9]{32}$",
-            message: "API Key must be a 32-character hexadecimal string"
-          }
-        },
-        {
-          name: "serverZone",
-          type: "select",
-          label: "Server Zone",
-          required: false,
-          size: "medium",
-          default: "US",
-          options: [
-            {
-              label: "United States (Default)",
-              value: "US"
-            },
-            {
-              label: "European Union",
-              value: "EU"
-            }
-          ],
-          description: "Choose EU only if your Amplitude project was created in the EU data center"
-        },
-        {
-          name: "userId",
-          type: "text",
-          label: "Default User ID (Optional)",
-          placeholder: "e.g., {{user.id}} or leave empty",
-          required: false,
-          size: "medium",
-          description: "Set a default user ID. You can use template variables like {{user.id}}"
-        },
-        {
-          name: "appVersion",
-          type: "text",
-          label: "App Version (Optional)",
-          placeholder: "e.g., 1.0.0",
-          required: false,
-          size: "medium",
-          description: "Track your application version with events"
-        },
-        {
-          name: "sessionTimeout",
-          type: "number",
-          label: "Session Timeout (minutes)",
-          placeholder: "30",
-          required: false,
-          size: "medium",
-          default: 30,
-          validation: {
-            min: 1,
-            max: 1440,
-            message: "Session timeout must be between 1 and 1440 minutes"
-          },
-          description: "Minutes of inactivity before a new session starts"
-        },
-        {
-          name: "includeReferrer",
-          type: "checkbox",
-          label: "Track Referrer Information",
-          default: true,
-          size: "medium",
-          description: "Capture referrer and referring domain for each session"
-        },
-        {
-          name: "includeUtm",
-          type: "checkbox",
-          label: "Track UTM Parameters",
-          default: true,
-          size: "medium",
-          description: "Automatically capture UTM campaign parameters"
-        },
-        {
-          name: "trackPageViews",
-          type: "checkbox",
-          label: "Track Page Views",
-          default: true,
-          size: "medium",
-          description: "Automatically track page view events"
-        },
-        {
-          name: "trackSessions",
-          type: "checkbox",
-          label: "Track Sessions",
-          default: true,
-          size: "medium",
-          description: "Track session start and end events"
-        },
-        {
-          name: "trackFormInteractions",
-          type: "checkbox",
-          label: "Track Form Interactions",
-          default: false,
-          size: "medium",
-          description: "Track form start and submit events"
-        },
-        {
-          name: "trackFileDownloads",
-          type: "checkbox",
-          label: "Track File Downloads",
-          default: false,
-          size: "medium",
-          description: "Track file download events"
-        }
-      ],
-      script: `(function() {
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.async = true;
-    script.src = '{{serverZone}}' === 'EU'
-      ? 'https://cdn.eu.amplitude.com/libs/analytics-browser-2.0.0-min.js.gz'
-      : 'https://cdn.amplitude.com/libs/analytics-browser-2.0.0-min.js.gz';
-  
-    script.onload = function() {
-      if (!window.amplitude) {
-        console.error('[Amplitude] Failed to load SDK');
-        return;
+      // The remove event is called BEFORE the item is removed
+      // The actual removal is handled by removeArrayItem
+      remove: function(value, index, field, formData, component) {
+        console.log('Before removing:', value, 'at index', index);
+        console.log('Current items:', formData[field.name]);
       }
-  
-      const config = {
-        flushIntervalMillis: 1000,
-        flushQueueSize: 30,
-        defaultTracking: {
-          pageViews: {{trackPageViews}},
-          sessions: {{trackSessions}},
-          formInteractions: {{trackFormInteractions}},
-          fileDownloads: {{trackFileDownloads}}
-        },
-        attribution: {
-          disabled: false,
-          trackNewCampaigns: true
-        }
-      };
-  
-      if ('{{serverZone}}' === 'EU') {
-        config.serverZone = 'EU';
-      }
-  
-      const sessionTimeout = {{sessionTimeout}};
-      if (sessionTimeout) {
-        config.sessionTimeout = sessionTimeout * 60 * 1000;
-      }
-  
-      const appVersion = '{{appVersion}}'.trim();
-      if (appVersion) {
-        config.appVersion = appVersion;
-      }
-  
-      if ({{includeReferrer}}) {
-        config.attribution.trackPageViews = true;
-      }
-  
-      const userId = '{{userId}}'.trim();
-      if (userId) {
-        window.amplitude.init('{{apiKey}}', userId, config);
-      } else {
-        window.amplitude.init('{{apiKey}}', undefined, config);
-      }
-  
-      if ({{includeUtm}}) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const utmParams = {};
-        ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'].forEach(param => {
-          const value = urlParams.get(param);
-          if (value) {
-            utmParams[param] = value;
-          }
-        });
-        if (Object.keys(utmParams).length > 0) {
-          window.amplitude.setUserProperties(utmParams);
-        }
-      }
-    };
-  
-    script.onerror = function() {
-      console.error('[Amplitude] Failed to load SDK script');
-    };
-  
-    document.head.appendChild(script);
-  })();`
-  
     }
-  };
-  
-  // Working example to demonstrate array field with chips
-  const ARRAY_FIELD_EXAMPLE = {
-    name: 'arrayField',
-    type: 'array',
-    label: 'Example URLs',
-    description: 'Add URLs to the list',
-    default: ['https://example.com'],
-    size: 'full',
-    input_config: {
+  }
+};
+
+// Template creator guide
+const HOW_TO_CREATE_TEMPLATE = `
+// To create a new template, use the createTemplate helper:
+
+myTemplate: createTemplate({
+  // REQUIRED - These must be provided
+  name: 'My Template Name',
+  path: 'my-template-path',
+  description: 'What this template does',
+  template_id: '1234',
+  template_version: '1.0.0',
+  fields: [
+    {
+      name: 'fieldName',
       type: 'text',
-      placeholder: 'Enter URL',
-      button_text: 'Add URL',
-      input_size: 'large',
-      button_size: 'small',
-      validation: {
-        pattern: /^https?:\/\/.+/,
-        message: 'Must be a valid URL'
-      },
-      events: {
-        // The click event is called BEFORE the item is added
-        // The actual addition is handled by addArrayItem
-        click: function(value, field, formData, component) {
-          console.log('Before adding:', value);
-          console.log('Current items:', formData[field.name]);
-        },
-        // The remove event is called BEFORE the item is removed
-        // The actual removal is handled by removeArrayItem
-        remove: function(value, index, field, formData, component) {
-          console.log('Before removing:', value, 'at index', index);
-          console.log('Current items:', formData[field.name]);
-        }
-      }
+      label: 'Field Label'
     }
-  };
+  ],
+  script: 'console.log("{{fieldName}}");',
   
-  // Template creator guide
-  const HOW_TO_CREATE_TEMPLATE = `
-  // To create a new template, use the createTemplate helper:
-  
-  myTemplate: createTemplate({
-    // REQUIRED - These must be provided
-    name: 'My Template Name',
-    path: 'my-template-path',
-    description: 'What this template does',
-    template_id: '1234',
-    template_version: '1.0.0',
-    fields: [
-      {
-        name: 'fieldName',
-        type: 'text',
-        label: 'Field Label'
-      }
-    ],
-    script: 'console.log("{{fieldName}}");',
-    
-    // OPTIONAL - These have defaults
-    img: 'https://example.com/logo.png',
-    note: 'Help text for users',
-    field_mappings: { fieldName: 'field_name' },
-    layout: { columns: 2, gap: '20px' }
-     })
-   `;
-  
-  module.exports = templates;
+  // OPTIONAL - These have defaults
+  img: 'https://example.com/logo.png',
+  note: 'Help text for users',
+  field_mappings: { fieldName: 'field_name' },
+  layout: { columns: 2, gap: '20px' }
+   })
+ `;
+
+module.exports = templates;
