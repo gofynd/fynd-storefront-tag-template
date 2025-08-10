@@ -638,6 +638,6 @@ const qualarooTemplate = createTemplate({
           first.parentNode.insertBefore(script, first);
       })();
     })();`
-  }});
+  });
 
 module.exports = qualarooTemplate;

@@ -671,6 +671,6 @@ const survicateTemplate = createTemplate({
           e.parentNode.insertBefore(s, e);
       })();
     })();`
-  }});
+  });
 
 module.exports = survicateTemplate;

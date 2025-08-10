@@ -740,6 +740,6 @@ const totangoTemplate = createTemplate({
           first.parentNode.insertBefore(script, first);
       })();
     })();`
-  }});
+  });
 
 module.exports = totangoTemplate;

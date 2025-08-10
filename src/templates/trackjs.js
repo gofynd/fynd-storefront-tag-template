@@ -750,6 +750,6 @@ const trackjsTemplate = createTemplate({
       var first = document.getElementsByTagName('script')[0];
       first.parentNode.insertBefore(script, first);
     })();`
-  }});
+  });
 
 module.exports = trackjsTemplate;

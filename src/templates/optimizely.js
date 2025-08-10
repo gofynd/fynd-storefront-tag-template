@@ -421,6 +421,6 @@ const optimizelyTemplate = createTemplate({
           first.parentNode.insertBefore(script, first);
       })();
     })();`
-  }});
+  });
 
 module.exports = optimizelyTemplate;

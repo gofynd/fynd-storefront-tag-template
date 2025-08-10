@@ -253,7 +253,7 @@ const notifyvisitorsTemplate = createTemplate({
       }
     }
   ],
-  script: \`(function() {
+  script: `(function() {
     // Skip loading in development if not enabled
     if (!{{enableInDevelopment}} && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('.local'))) {
         if ({{debugMode}}) {
@@ -402,11 +402,11 @@ const notifyvisitorsTemplate = createTemplate({
         var nv = document.createElement('script');
         nv.type = 'text/javascript';
         nv.async = true;
-        nv.src = 'https://cdn.notifyvisitors.com/js/nv.js'\;
-        var s = document.getElementsByTagName('script')[0];
-        s.parentNode.insertBefore(nv, s);
-    })();
-  })();\`
+              nv.src = 'https://cdn.notifyvisitors.com/js/nv.js';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(nv, s);
+  })();
+})();`
 });
 
 module.exports = notifyvisitorsTemplate;

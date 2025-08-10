@@ -507,6 +507,6 @@ const adobeTargetTemplate = createTemplate({
           first.parentNode.insertBefore(script, first);
       })();
     })();`
-  }});
+  });
 
 module.exports = adobeTargetTemplate;

@@ -567,6 +567,6 @@ const abTastyTemplate = createTemplate({
           }
       })();
     })();`
-  }});
+  });
 
 module.exports = abTastyTemplate;

@@ -871,6 +871,6 @@ const usabillaTemplate = createTemplate({
           first.parentNode.insertBefore(script, first);
       })();
     })();`
-  }});
+  });
 
 module.exports = usabillaTemplate;

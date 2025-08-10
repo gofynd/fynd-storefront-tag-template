@@ -862,6 +862,6 @@ const typeformTemplate = createTemplate({
           }
       }, 100);
     })();`
-  }});
+  });
 
 module.exports = typeformTemplate;

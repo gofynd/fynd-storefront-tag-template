@@ -824,6 +824,6 @@ const intercomTemplate = createTemplate({
           });
       }
     })();`
-  }});
+  });
 
 module.exports = intercomTemplate;

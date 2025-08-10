@@ -738,6 +738,6 @@ const logrocketTemplate = createTemplate({
           });
       }
     })();`
-  }});
+  });
 
 module.exports = logrocketTemplate;
