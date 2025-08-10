@@ -11,6 +11,7 @@ const heapTemplate = createTemplate({
   description: 'Autocapture user interactions without code changes.',
   template_id: '1007',
   template_version: '1.0.0',
+  category: 'analytics',
   img: 'https://logo.clearbit.com/heap.io',
   note: '**Heap** automatically captures every user interaction without requiring code changes. Find your Environment ID in the Heap Dashboard under Install → Web.',
   help_link: {

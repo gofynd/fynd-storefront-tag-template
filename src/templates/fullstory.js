@@ -10,6 +10,7 @@ const fullstoryTemplate = createTemplate({
   description: "Digital experience intelligence platform for session replay and analytics.",
   template_id: "1013",
   template_version: "1.0.0",
+  category: 'recording',
   img: "https://logo.clearbit.com/fullstory.com",
   note: "Find your Org ID in Settings → General → Org Id. FullStory captures every user interaction for powerful insights.",
   help_link: {

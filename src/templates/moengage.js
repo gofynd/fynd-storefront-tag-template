@@ -10,6 +10,7 @@ const moengageTemplate = createTemplate({
   description: "Customer engagement platform for personalized messaging.",
   template_id: "1016",
   template_version: "1.0.0",
+  category: 'engagement',
   img: "https://logo.clearbit.com/moengage.com",
   note: "Find your App ID in App Settings → General. MoEngage powers personalized customer engagement across channels.",
   help_link: {

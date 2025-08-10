@@ -11,6 +11,7 @@ const gtmTemplate = createTemplate({
   description: "Integrate Google Tag Manager for advanced analytics.",
   template_id: "1001",
   template_version: "1.0.0",
+  category: 'analytics',
   fields: [
     {
       name: 'gtmId',

@@ -12,6 +12,7 @@ const ga4Template = createTemplate({
   note:"The APP_ID for your Google Analytics account is available on the Google Analytics Dashboard in **Settings > App Settings > Account Settings > APP ID**.",
   template_id: "1003",
   template_version: "1.0.0",
+  category: 'analytics',
   type: 'js',
   sub_type: 'inline',
   position: 'head',

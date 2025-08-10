@@ -11,6 +11,7 @@ const mixpanelTemplate = createTemplate({
   description: 'Product analytics for user behavior tracking.',
   template_id: '1006',
   template_version: '1.0.0',
+  category: 'analytics',
   type: 'js',
   sub_type: 'inline',
   position: 'head',

@@ -30,6 +30,19 @@ module.exports.clevertap = templates.clevertap;
 module.exports.moengage = templates.moengage;
 module.exports.webengage = templates.webengage;
 module.exports.pushengage = templates.pushengage;
+module.exports.notifyvisitors = templates.notifyvisitors;
+module.exports.optimizely = templates.optimizely;
+module.exports.adobeTarget = templates.adobeTarget;
+module.exports.abTasty = templates.abTasty;
+module.exports.qualaroo = templates.qualaroo;
+module.exports.survicate = templates.survicate;
+module.exports.typeform = templates.typeform;
+module.exports.usabilla = templates.usabilla;
+module.exports.totango = templates.totango;
+module.exports.intercom = templates.intercom;
+module.exports.logrocket = templates.logrocket;
+module.exports.trackjs = templates.trackjs;
+module.exports.quantcast = templates.quantcast;
 
-// Export the createTemplate helper
+// Export the createTemplate helper for custom templates
 module.exports.createTemplate = createTemplate; 

@@ -15,6 +15,7 @@ const sentryTemplate = {
   },
   template_id: "1002",
   template_version: "1.0.0",
+  category: 'monitoring',
   type: 'js',
   sub_type: 'inline',
   position: 'head',

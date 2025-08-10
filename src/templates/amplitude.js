@@ -17,6 +17,7 @@ const amplitudeTemplate = createTemplate({
   },
   template_id: "1004",
   template_version: "1.0.0",
+  category: 'analytics',
   type: "js",
   sub_type: "inline",
   position: "head",

@@ -10,6 +10,7 @@ const crazyeggTemplate = createTemplate({
   description: "Heatmaps and user recordings for conversion optimization.",
   template_id: "1012",
   template_version: "1.0.0",
+  category: 'recording',
   img: "https://logo.clearbit.com/crazyegg.com",
   note: "Find your Account Number in Account → Tracking Script. Crazy Egg provides heatmaps, scrollmaps, and user recordings.",
   help_link: {

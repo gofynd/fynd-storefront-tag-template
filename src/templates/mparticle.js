@@ -10,6 +10,7 @@ const mparticleTemplate = createTemplate({
   description: "Customer data platform for mobile and web analytics.",
   template_id: "1010",
   template_version: "1.0.0",
+  category: 'analytics',
   img: "https://logo.clearbit.com/mparticle.com",
   note: "Find your API Key in Setup → Inputs → Web. mParticle collects data and forwards it to 300+ integrations.",
   help_link: {

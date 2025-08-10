@@ -10,6 +10,7 @@ const clevertapTemplate = createTemplate({
   description: "Customer engagement and retention platform.",
   template_id: "1015",
   template_version: "1.0.0",
+  category: 'engagement',
   img: "https://logo.clearbit.com/clevertap.com",
   note: "Find your Account ID and Token in Settings → Project. CleverTap helps drive user engagement and retention.",
   help_link: {

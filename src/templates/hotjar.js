@@ -10,6 +10,7 @@ const hotjarTemplate = createTemplate({
   description: "Behavior analytics with heatmaps, recordings, and feedback.",
   template_id: "1011",
   template_version: "1.0.0",
+  category: 'recording',
   img: "https://logo.clearbit.com/hotjar.com",
   note: "Find your Site ID in Sites & Organizations. Hotjar helps you understand user behavior through heatmaps and session recordings.",
   help_link: {

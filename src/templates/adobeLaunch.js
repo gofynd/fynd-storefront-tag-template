@@ -11,6 +11,7 @@ const adobeLaunchTemplate = createTemplate({
   description: 'Adobe Experience Platform tag management system.',
   template_id: '1008',
   template_version: '1.0.0',
+  category: 'analytics',
   type: 'js',
   sub_type: 'inline',
   position: 'head',

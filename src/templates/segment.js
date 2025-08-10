@@ -10,6 +10,7 @@ const segmentTemplate = createTemplate({
   description: "Customer data platform for collecting and routing analytics data.",
   template_id: "1009",
   template_version: "1.0.0",
+  category: 'analytics',
   img: "https://logo.clearbit.com/segment.com",
   note: "Find your Write Key in Sources → JavaScript → Settings → API Keys. Segment collects data once and sends it to 300+ destinations.",
   help_link: {
