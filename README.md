@@ -37,6 +37,47 @@ const sentryTemplate = templates.sentry;
 const { gtm, ga4, hotjar } = require('@gofynd/storefront-tag-templates');
 ```
 
+### Optimized Imports by Category
+
+To reduce bundle size, you can import only the category of templates you need:
+
+```javascript
+// Import only analytics templates
+const analyticsTemplates = require('@gofynd/storefront-tag-templates/analytics');
+// Access: gtm, ga4, amplitude, adobeAnalytics, mixpanel, heap, etc.
+
+// Import only session recording templates
+const recordingTemplates = require('@gofynd/storefront-tag-templates/recording');
+// Access: hotjar, crazyegg, fullstory, mouseflow, logrocket
+
+// Import only customer engagement templates
+const engagementTemplates = require('@gofynd/storefront-tag-templates/engagement');
+// Access: clevertap, moengage, webengage, pushengage, notifyvisitors, intercom
+
+// Import only A/B testing templates
+const testingTemplates = require('@gofynd/storefront-tag-templates/testing');
+// Access: optimizely, adobeTarget, abTasty
+
+// Import only feedback/survey templates
+const feedbackTemplates = require('@gofynd/storefront-tag-templates/feedback');
+// Access: qualaroo, survicate, typeform, usabilla
+
+// Import only error monitoring templates
+const monitoringTemplates = require('@gofynd/storefront-tag-templates/monitoring');
+// Access: sentry, trackjs
+```
+
+### ES Module Imports
+
+```javascript
+// Import all templates
+import templates from '@gofynd/storefront-tag-templates';
+
+// Import specific categories for smaller bundle size
+import analyticsTemplates from '@gofynd/storefront-tag-templates/analytics';
+import recordingTemplates from '@gofynd/storefront-tag-templates/recording';
+```
+
 ### Creating Custom Templates
 
 ```javascript

@@ -1,17 +1,48 @@
 {
   "name": "@gofynd/storefront-tag-templates",
   "version": "1.0.0",
-  "description": "A collection of tag templates for Fynd Platform storefronts including Google Tag Manager, Sentry, and Google Analytics integrations",
-  "main": "dist/templates.js",
-  "module": "dist/templates.esm.js",
-  "types": "dist/templates.d.ts",
+  "description": "Pre-configured tag templates for analytics, marketing, and tracking services on Fynd Platform storefronts",
+  "main": "./dist/templates.js",
+  "module": "./dist/templates.esm.js",
+  "types": "./dist/templates.d.ts",
+  "sideEffects": false,
   "exports": {
     ".": {
       "require": "./dist/templates.js",
       "import": "./dist/templates.esm.js",
       "default": "./dist/templates.js"
     },
-    "./dist/template": "./dist/template.js"
+    "./dist/template": "./dist/template.js",
+    "./analytics": {
+      "require": "./src/analytics.js",
+      "import": "./src/analytics.js",
+      "default": "./src/analytics.js"
+    },
+    "./recording": {
+      "require": "./src/recording.js",
+      "import": "./src/recording.js",
+      "default": "./src/recording.js"
+    },
+    "./engagement": {
+      "require": "./src/engagement.js",
+      "import": "./src/engagement.js",
+      "default": "./src/engagement.js"
+    },
+    "./testing": {
+      "require": "./src/testing.js",
+      "import": "./src/testing.js",
+      "default": "./src/testing.js"
+    },
+    "./feedback": {
+      "require": "./src/feedback.js",
+      "import": "./src/feedback.js",
+      "default": "./src/feedback.js"
+    },
+    "./monitoring": {
+      "require": "./src/monitoring.js",
+      "import": "./src/monitoring.js",
+      "default": "./src/monitoring.js"
+    }
   },
   "files": [
     "dist",
@@ -21,11 +52,11 @@
   ],
   "scripts": {
     "build": "webpack --mode production",
-    "build:dev": "webpack --mode development",
-    "watch": "webpack --mode development --watch",
+    "dev": "webpack --mode development --watch",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run build",
-    "test": "echo \"No tests specified\" && exit 0",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "analyze": "ANALYZE=true webpack --mode production",
     "lint": "eslint src/**/*.js",
     "format": "prettier --write \"src/**/*.js\""
   },
@@ -61,9 +92,10 @@
     "prettier": "^3.0.3",
     "terser-webpack-plugin": "^5.3.9",
     "webpack": "^5.89.0",
+    "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4"
   },
   "engines": {
     "node": ">=14.0.0"
   }
-} 
+}

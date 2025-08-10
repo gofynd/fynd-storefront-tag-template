@@ -2,9 +2,18 @@ const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
+  const isAnalyze = process.env.ANALYZE === 'true';
+
+  // Clean dist folder once before all builds
+  if (isProduction && !global.webpackCleanDone) {
+    const { execSync } = require('child_process');
+    execSync('rm -rf dist', { stdio: 'inherit' });
+    global.webpackCleanDone = true;
+  }
 
   const commonConfig = {
     entry: './src/index.js',
@@ -27,17 +36,43 @@ module.exports = (env, argv) => {
       minimizer: [
         new TerserPlugin({
           terserOptions: {
-            format: {
+            parse: {
+              ecma: 8,
+            },
+            compress: {
+              ecma: 5,
+              warnings: false,
+              comparisons: false,
+              inline: 2,
+              drop_console: isProduction,
+              drop_debugger: isProduction,
+              pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug', 'console.warn'] : [],
+            },
+            mangle: {
+              safari10: true,
+            },
+            output: {
+              ecma: 5,
               comments: false,
+              ascii_only: true,
             },
           },
           extractComments: false,
         })
-      ]
+      ],
+      // Tree shaking optimizations
+      usedExports: true,
+      sideEffects: false,
+    },
+    performance: {
+      // Increase limits for library bundles
+      hints: isProduction ? 'warning' : false,
+      maxEntrypointSize: 512000, // 500 KiB
+      maxAssetSize: 512000, // 500 KiB
     }
   };
 
-  return [
+  const configs = [
     // CommonJS build
     {
       ...commonConfig,
@@ -53,7 +88,12 @@ module.exports = (env, argv) => {
           patterns: [
             { from: 'src/template.js', to: 'template.js' }
           ]
-        })
+        }),
+        ...(isAnalyze ? [new BundleAnalyzerPlugin({
+          analyzerMode: 'static',
+          reportFilename: 'bundle-report-cjs.html',
+          openAnalyzer: false
+        })] : [])
       ]
     },
     // ESM build
@@ -98,4 +138,6 @@ module.exports = (env, argv) => {
       ]
     }
   ];
+
+  return configs;
 }; 
