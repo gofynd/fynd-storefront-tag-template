@@ -53,6 +53,7 @@ const mouseflowTemplate = require('./templates/mouseflow');
 const mparticleTemplate = require('./templates/mparticle');
 const notifyvisitorsTemplate = require('./templates/notifyvisitors');
 const optimizelyTemplate = require('./templates/optimizely');
+const posthogTemplate = require('./templates/posthog');
 const pushengageTemplate = require('./templates/pushengage');
 const qualarooTemplate = require('./templates/qualaroo');
 const quantcastTemplate = require('./templates/quantcast');
@@ -77,6 +78,7 @@ const templates = {
   segment: segmentTemplate,
   mparticle: mparticleTemplate,
   quantcast: quantcastTemplate,
+  posthog: posthogTemplate,
   
   // Session Recording & Heatmaps
   hotjar: hotjarTemplate,

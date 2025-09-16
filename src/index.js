@@ -22,6 +22,7 @@ module.exports.heap = templates.heap;
 module.exports.adobeLaunch = templates.adobeLaunch;
 module.exports.segment = templates.segment;
 module.exports.mparticle = templates.mparticle;
+module.exports.posthog = templates.posthog;
 module.exports.hotjar = templates.hotjar;
 module.exports.crazyegg = templates.crazyegg;
 module.exports.fullstory = templates.fullstory;

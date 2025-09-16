@@ -10,6 +10,7 @@ const segmentTemplate = require('./templates/segment');
 const mparticleTemplate = require('./templates/mparticle');
 const quantcastTemplate = require('./templates/quantcast');
 const totangoTemplate = require('./templates/totango');
+const posthogTemplate = require('./templates/posthog');
 
 module.exports = {
   gtm: gtmTemplate,
@@ -22,5 +23,6 @@ module.exports = {
   segment: segmentTemplate,
   mparticle: mparticleTemplate,
   quantcast: quantcastTemplate,
-  totango: totangoTemplate
+  totango: totangoTemplate,
+  posthog: posthogTemplate
 }; 
