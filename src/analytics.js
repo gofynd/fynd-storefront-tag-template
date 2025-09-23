@@ -11,6 +11,7 @@ const mparticleTemplate = require('./templates/mparticle');
 const quantcastTemplate = require('./templates/quantcast');
 const totangoTemplate = require('./templates/totango');
 const posthogTemplate = require('./templates/posthog');
+const metaPixelTemplate = require('./templates/metaPixel');
 
 module.exports = {
   gtm: gtmTemplate,
@@ -24,5 +25,6 @@ module.exports = {
   mparticle: mparticleTemplate,
   quantcast: quantcastTemplate,
   totango: totangoTemplate,
-  posthog: posthogTemplate
+  posthog: posthogTemplate,
+  metaPixel: metaPixelTemplate
 }; 

@@ -11,7 +11,7 @@ const trackjsTemplate = createTemplate({
     description: 'JavaScript error monitoring to track, replay, and fix errors in production.',
     template_id: '1030',
     template_version: '1.0.0',
-    category: 'performance',
+    category: 'monitoring',
     type: 'js',
     sub_type: 'inline',
     position: 'head',
