@@ -284,7 +284,7 @@ const metaPixelTemplate = createTemplate({
   consumeEvent();`,
 
   // Optional keys
-  img: "https://about.fb.com/wp-content/uploads/2019/11/Meta-Logo.png",
+  img: "https://cdn.fynd.com/v2/falling-surf-7c8bb8/fyndnp/wrkr/x5/misc/pictures/free-icon/original/PSpnazzPe-ezl6UPQ-U-logo.png",
   note: "Meta Pixel tracks conversions from Facebook and Instagram ads. Find your Pixel ID in Facebook Events Manager under Data Sources > Pixels.",
   field_mappings: {
     pixelId: 'pixel_id',
