@@ -14,16 +14,96 @@ const metaPixelTemplate = createTemplate({
   category: 'analytics',
   fields: [
     {
+      name: 'useGTM',
+      type: 'boolean',
+      label: 'GTM Tracking',
+      required: false,
+      size: 'full',
+      description: 'Turn ON the toggle button if you\'re using Google Tag Manager (GTM) for managing your Pixel events',
+      tooltip: 'You can choose between GTM or Meta for tracking Pixel events. To utilize GTM Tracking, turn on the toggle button. To use Meta Tracking, turn off the GTM Tracking toggle and enter the Meta Pixel ID below.',
+      default: false,
+      note: 'You can choose between GTM or Meta for tracking Pixel events. To utilize GTM Tracking, turn on the toggle button. To use Meta Tracking, turn off the GTM Tracking toggle and enter the Meta Pixel ID below.'
+    },
+    {
       name: 'pixelId',
       type: 'text',
       label: 'Meta Pixel ID',
-      placeholder: '1234567890123456',
-      required: true,
+      placeholder: 'Enter pixel ID',
+      required: function(formData) {
+        return !formData.useGTM;
+      },
       size: 'full',
-      description: 'Your Meta Pixel ID from Facebook Events Manager.',
+      description: 'Facebook Pixel ID for your Meta Pixel account is available on the Facebook Business Account in Settings > App Settings > Account Settings > APP ID',
+      tooltip: 'Facebook Pixel ID for your Meta Pixel account is available on the Facebook Business Account in Settings > App Settings > Account Settings > APP ID',
+      disabled: function(formData) {
+        return formData.useGTM === true;
+      },
       validation: {
         pattern: /^\d{15,16}$/,
         message: 'Must be a valid Meta Pixel ID (15-16 digits)',
+      }
+    },
+    {
+      name: 'enableConversionsApi',
+      type: 'boolean',
+      label: 'Conversions API',
+      required: false,
+      size: 'full',
+      description: 'Enable Conversions API for server-side event tracking',
+      tooltip: 'To utilize event tracking via Conversions API, you need to activate Conversions API. Ensure to turn on the Conversions API toggle button and save the Pixel ID and Access Token details.',
+      default: false,
+      note: 'To utilize event tracking via Conversions API, you need to activate Conversions API. Ensure to turn on the Conversions API toggle button and save the Pixel ID and Access Token details.'
+    },
+    {
+      name: 'conversionsApiPixelId',
+      type: 'text',
+      label: 'Meta Pixel ID',
+      placeholder: 'Enter pixel ID',
+      required: function(formData) {
+        return formData.enableConversionsApi === true;
+      },
+      size: 'full',
+      description: 'Meta Pixel ID for Conversions API',
+      visible: function(formData) {
+        return formData.enableConversionsApi === true;
+      },
+      validation: {
+        pattern: /^\d{15,16}$/,
+        message: 'Must be a valid Meta Pixel ID (15-16 digits)',
+      }
+    },
+    {
+      name: 'accessToken',
+      type: 'text',
+      label: 'Access Token',
+      placeholder: 'Enter access token',
+      required: function(formData) {
+        return formData.enableConversionsApi === true;
+      },
+      size: 'full',
+      description: 'Access Token for Meta Conversions API',
+      visible: function(formData) {
+        return formData.enableConversionsApi === true;
+      },
+      validation: {
+        pattern: /^.{50,}$/,
+        message: 'Must be a valid access token',
+      }
+    },
+    {
+      name: 'testEventCode',
+      type: 'text',
+      label: 'Test Events Code',
+      placeholder: 'Enter test events code',
+      required: false,
+      size: 'full',
+      description: 'Use this if you need to test the server-side event. Remove it after testing.',
+      visible: function(formData) {
+        return formData.enableConversionsApi === true;
+      },
+      validation: {
+        pattern: /^[A-Z0-9]{8,10}$/,
+        message: 'Must be a valid test event code (8-10 uppercase alphanumeric characters)',
       }
     },
     {
@@ -33,7 +113,10 @@ const metaPixelTemplate = createTemplate({
       required: false,
       size: 'half',
       description: 'Automatically send hashed customer information to improve event matching.',
-      default: true
+      default: true,
+      visible: function(formData) {
+        return !formData.useGTM;
+      }
     },
     {
       name: 'enableAutomaticMatching',
@@ -42,19 +125,9 @@ const metaPixelTemplate = createTemplate({
       required: false,
       size: 'half',
       description: 'Automatically collect additional website visitor information.',
-      default: true
-    },
-    {
-      name: 'testEventCode',
-      type: 'text',
-      label: 'Test Event Code',
-      placeholder: 'TEST12345',
-      required: false,
-      size: 'full',
-      description: 'Test event code for testing pixel events (optional, for development only).',
-      validation: {
-        pattern: /^[A-Z0-9]{8,10}$/,
-        message: 'Must be a valid test event code (8-10 uppercase alphanumeric characters)',
+      default: true,
+      visible: function(formData) {
+        return !formData.useGTM;
       }
     },
     {
@@ -64,7 +137,10 @@ const metaPixelTemplate = createTemplate({
       required: false,
       size: 'half',
       description: 'Automatically track page view events.',
-      default: true
+      default: true,
+      visible: function(formData) {
+        return !formData.useGTM;
+      }
     },
     {
       name: 'trackCustomEvents',
@@ -73,7 +149,10 @@ const metaPixelTemplate = createTemplate({
       required: false,
       size: 'half',
       description: 'Track AddToCart, Purchase, and other e-commerce events.',
-      default: true
+      default: true,
+      visible: function(formData) {
+        return !formData.useGTM;
+      }
     },
     {
       name: 'currency',
@@ -84,6 +163,9 @@ const metaPixelTemplate = createTemplate({
       size: 'half',
       description: 'Default currency code for purchase events (e.g., USD, EUR, INR).',
       default: 'INR',
+      visible: function(formData) {
+        return !formData.useGTM;
+      },
       validation: {
         pattern: /^[A-Z]{3}$/,
         message: 'Must be a valid 3-letter currency code (e.g., USD, EUR, INR)',
@@ -91,6 +173,8 @@ const metaPixelTemplate = createTemplate({
     }
   ],
   script: `window.addEventListener("load", function() {
+    {{#unless useGTM}}
+    // Initialize Meta Pixel only if not using GTM
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -122,6 +206,7 @@ const metaPixelTemplate = createTemplate({
     {{#if trackPageView}}
     fbq('track', 'PageView');
     {{/if}}
+    {{/unless}}
   });
 
   function consumeEvent() {
@@ -251,20 +336,33 @@ const metaPixelTemplate = createTemplate({
     };
 
     const trackEvent = (event, data) => {
+      const eventName = getMetaPixelEventName(event);
+      if (!eventName) return;
+      
+      const eventData = formatEventData(event, data);
+      
+      {{#if useGTM}}
+      // Push to GTM dataLayer
+      if (window.dataLayer) {
+        window.dataLayer.push({
+          'event': 'meta_pixel_event',
+          'fb_event_name': eventName,
+          'fb_event_data': eventData
+        });
+        console.log('Meta Pixel Event (via GTM):', eventName, eventData);
+      }
+      {{else}}
+      // Direct Meta Pixel tracking
       if (!{{trackCustomEvents}} || !window.fbq) return;
       
-      const eventName = getMetaPixelEventName(event);
-      if (eventName) {
-        const eventData = formatEventData(event, data);
-        
-        {{#if testEventCode}}
-        fbq('trackSingle', '{{pixelId}}', eventName, eventData, '{{testEventCode}}');
-        {{else}}
-        fbq('track', eventName, eventData);
-        {{/if}}
-        
-        console.log('Meta Pixel Event:', eventName, eventData);
-      }
+      {{#if testEventCode}}
+      fbq('trackSingle', '{{pixelId}}', eventName, eventData, '{{testEventCode}}');
+      {{else}}
+      fbq('track', eventName, eventData);
+      {{/if}}
+      
+      console.log('Meta Pixel Event:', eventName, eventData);
+      {{/if}}
     };
 
     const getSkipEvents = () => [];
@@ -285,12 +383,16 @@ const metaPixelTemplate = createTemplate({
 
   // Optional keys
   img: "https://cdn.fynd.com/v2/falling-surf-7c8bb8/fyndnp/wrkr/x5/misc/pictures/free-icon/original/PSpnazzPe-ezl6UPQ-U-logo.png",
-  note: "Meta Pixel tracks conversions from Facebook and Instagram ads. Find your Pixel ID in Facebook Events Manager under Data Sources > Pixels.",
+  note: "Meta Pixel tracks conversions from Facebook and Instagram ads. You can either use GTM to manage Pixel events or integrate Meta Pixel directly. For Conversions API, you'll need an Access Token from Facebook Business Manager. Find your Pixel ID in Facebook Events Manager under Data Sources > Pixels.",
   field_mappings: {
+    useGTM: 'use_gtm',
     pixelId: 'pixel_id',
+    enableConversionsApi: 'enable_conversions_api',
+    conversionsApiPixelId: 'conversions_api_pixel_id',
+    accessToken: 'access_token',
+    testEventCode: 'test_event_code',
     enableAdvancedMatching: 'advanced_matching',
     enableAutomaticMatching: 'automatic_matching',
-    testEventCode: 'test_event_code',
     trackPageView: 'track_pageview',
     trackCustomEvents: 'track_custom_events',
     currency: 'default_currency'
