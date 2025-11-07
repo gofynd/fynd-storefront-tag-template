@@ -37,7 +37,7 @@ const ga4Template = createTemplate({
       size: 'medium',
       description: 'GA4 (G-XXXXXXXXXX) or UA ID. Find in Admin → Data Streams.',
       validation: {
-        pattern: /^(G-[A-Z0-9]+|UA-[0-9]+-[0-9]+)$/i,
+        pattern: "/^(G-[A-Z0-9]+|UA-[0-9]+-[0-9]+)$/i",
         message: 'Must be a valid Measurement ID (e.g., G-XXXXXXXXXX or UA-XXXXXXXXX-X)',
       },
     },

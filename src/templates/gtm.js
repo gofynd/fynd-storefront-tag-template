@@ -22,7 +22,7 @@ const gtmTemplate = createTemplate({
       size: 'full',
       description: 'Container ID from GTM dashboard. Format: GTM-XXXXXXX.',
       validation: {
-        pattern: /^GTM-[A-Z0-9]+$/i,
+        pattern: "/^GTM-[A-Z0-9]+$/i",
         message: 'Must be a valid GTM ID (e.g., GTM-XXXXXXX)',
       },
       events: {

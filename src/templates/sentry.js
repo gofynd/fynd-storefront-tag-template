@@ -40,7 +40,7 @@ const sentryTemplate = {
       size: 'full',
       description: 'Find in Settings → Projects → Client Keys (DSN).',
       validation: {
-        pattern: /^https?:\/\/[\w.@:\/\-]+$/,
+        pattern: "/^https?:\/\/[\w.@:\/\-]+$/",
         message: 'Must be a valid DSN URL',
       },
     },
@@ -66,7 +66,7 @@ const sentryTemplate = {
         input_size: 'large',  // Size for the input within array field
         button_size: 'small', // Size for the button within array field
         validation: {
-          pattern: /^(\*|https?:\/\/)?[a-z\d\-.*:/_@]+$/i,
+          pattern: "/^(\*|https?:\/\/)?[a-z\d\-.*:/_@]+$/i",
           message: 'Enter a valid URL pattern (wildcards * are supported)'
         },
         events: {

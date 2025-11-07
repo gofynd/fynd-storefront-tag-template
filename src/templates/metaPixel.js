@@ -39,7 +39,7 @@ const metaPixelTemplate = createTemplate({
         return formData.useGTM === true;
       },
       validation: {
-        pattern: /^\d{15,16}$/,
+        pattern: "/^\d{15,16}$/",
         message: 'Must be a valid Meta Pixel ID (15-16 digits)',
       }
     },
@@ -73,7 +73,7 @@ const metaPixelTemplate = createTemplate({
         return formData.enableConversionsApi === true;
       },
       validation: {
-        pattern: /^\d{15,16}$/,
+        pattern: "/^\d{15,16}$/",
         message: 'Must be a valid Meta Pixel ID (15-16 digits)',
       }
     },
@@ -91,7 +91,7 @@ const metaPixelTemplate = createTemplate({
         return formData.enableConversionsApi === true;
       },
       validation: {
-        pattern: /^.{50,}$/,
+        pattern: "/^.{50,}$/",
         message: 'Must be a valid access token',
       }
     },
@@ -107,7 +107,7 @@ const metaPixelTemplate = createTemplate({
         return formData.enableConversionsApi === true;
       },
       validation: {
-        pattern: /^[A-Z0-9]{8,10}$/,
+        pattern: "/^[A-Z0-9]{8,10}$/",
         message: 'Must be a valid test event code (8-10 uppercase alphanumeric characters)',
       }
     }
