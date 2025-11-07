@@ -18,26 +18,6 @@
       "import": "./src/analytics.js",
       "default": "./src/analytics.js"
     },
-    "./recording": {
-      "require": "./src/recording.js",
-      "import": "./src/recording.js",
-      "default": "./src/recording.js"
-    },
-    "./engagement": {
-      "require": "./src/engagement.js",
-      "import": "./src/engagement.js",
-      "default": "./src/engagement.js"
-    },
-    "./testing": {
-      "require": "./src/testing.js",
-      "import": "./src/testing.js",
-      "default": "./src/testing.js"
-    },
-    "./feedback": {
-      "require": "./src/feedback.js",
-      "import": "./src/feedback.js",
-      "default": "./src/feedback.js"
-    },
     "./monitoring": {
       "require": "./src/monitoring.js",
       "import": "./src/monitoring.js",
