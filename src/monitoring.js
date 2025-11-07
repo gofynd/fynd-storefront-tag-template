@@ -4,5 +4,5 @@ const trackjsTemplate = require('./templates/trackjs');
 
 module.exports = {
   sentry: sentryTemplate,
-  trackjs: trackjsTemplate
+  // trackjs: trackjsTemplate
 }; 

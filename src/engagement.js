@@ -6,11 +6,11 @@ const pushengageTemplate = require('./templates/pushengage');
 const notifyvisitorsTemplate = require('./templates/notifyvisitors');
 const intercomTemplate = require('./templates/intercom');
 
-module.exports = {
-  clevertap: clevertapTemplate,
-  moengage: moengageTemplate,
-  webengage: webengageTemplate,
-  pushengage: pushengageTemplate,
-  notifyvisitors: notifyvisitorsTemplate,
-  intercom: intercomTemplate
-}; 
+// module.exports = {
+//   clevertap: clevertapTemplate,
+//   moengage: moengageTemplate,
+//   webengage: webengageTemplate,
+//   pushengage: pushengageTemplate,
+//   notifyvisitors: notifyvisitorsTemplate,
+//   intercom: intercomTemplate
+// }; 

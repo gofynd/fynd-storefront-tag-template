@@ -44,6 +44,12 @@ const metaPixelTemplate = createTemplate({
       }
     },
     {
+      name: 'conversionsApiNote',
+      type: 'note',
+      size: 'full',
+      content: 'For Conversions API, you\'ll need an Access Token from Facebook Business Manager. Find your Pixel ID in Facebook Events Manager under Data Sources > Pixels.'
+    },
+    {
       name: 'enableConversionsApi',
       type: 'boolean',
       label: 'Conversions API',
@@ -51,8 +57,7 @@ const metaPixelTemplate = createTemplate({
       size: 'full',
       description: 'Enable Conversions API for server-side event tracking',
       tooltip: 'To utilize event tracking via Conversions API, you need to activate Conversions API. Ensure to turn on the Conversions API toggle button and save the Pixel ID and Access Token details.',
-      default: false,
-      note: 'To utilize event tracking via Conversions API, you need to activate Conversions API. Ensure to turn on the Conversions API toggle button and save the Pixel ID and Access Token details.'
+      default: false
     },
     {
       name: 'conversionsApiPixelId',
@@ -105,71 +110,6 @@ const metaPixelTemplate = createTemplate({
         pattern: /^[A-Z0-9]{8,10}$/,
         message: 'Must be a valid test event code (8-10 uppercase alphanumeric characters)',
       }
-    },
-    {
-      name: 'enableAdvancedMatching',
-      type: 'boolean',
-      label: 'Enable Advanced Matching',
-      required: false,
-      size: 'half',
-      description: 'Automatically send hashed customer information to improve event matching.',
-      default: true,
-      visible: function(formData) {
-        return !formData.useGTM;
-      }
-    },
-    {
-      name: 'enableAutomaticMatching',
-      type: 'boolean',
-      label: 'Enable Automatic Matching',
-      required: false,
-      size: 'half',
-      description: 'Automatically collect additional website visitor information.',
-      default: true,
-      visible: function(formData) {
-        return !formData.useGTM;
-      }
-    },
-    {
-      name: 'trackPageView',
-      type: 'boolean',
-      label: 'Track Page Views',
-      required: false,
-      size: 'half',
-      description: 'Automatically track page view events.',
-      default: true,
-      visible: function(formData) {
-        return !formData.useGTM;
-      }
-    },
-    {
-      name: 'trackCustomEvents',
-      type: 'boolean',
-      label: 'Track E-commerce Events',
-      required: false,
-      size: 'half',
-      description: 'Track AddToCart, Purchase, and other e-commerce events.',
-      default: true,
-      visible: function(formData) {
-        return !formData.useGTM;
-      }
-    },
-    {
-      name: 'currency',
-      type: 'text',
-      label: 'Default Currency',
-      placeholder: 'INR',
-      required: false,
-      size: 'half',
-      description: 'Default currency code for purchase events (e.g., USD, EUR, INR).',
-      default: 'INR',
-      visible: function(formData) {
-        return !formData.useGTM;
-      },
-      validation: {
-        pattern: /^[A-Z]{3}$/,
-        message: 'Must be a valid 3-letter currency code (e.g., USD, EUR, INR)',
-      }
     }
   ],
   script: `window.addEventListener("load", function() {
@@ -185,27 +125,10 @@ const metaPixelTemplate = createTemplate({
     'https://connect.facebook.net/en_US/fbevents.js');
 
     // Initialize pixel
-    {{#if testEventCode}}
-    fbq('init', '{{pixelId}}', {
-      em: 'auto',
-      {{#if enableAdvancedMatching}}
-      advanced_matching: true,
-      {{/if}}
-      {{#if enableAutomaticMatching}}
-      automatic_matching: true
-      {{/if}}
-    }, '{{testEventCode}}');
-    {{else}}
-    fbq('init', '{{pixelId}}', {
-      em: 'auto'{{#if enableAdvancedMatching}},
-      advanced_matching: true{{/if}}{{#if enableAutomaticMatching}},
-      automatic_matching: true{{/if}}
-    });
-    {{/if}}
-
-    {{#if trackPageView}}
+    fbq('init', '{{pixelId}}');
+    
+    // Track page view
     fbq('track', 'PageView');
-    {{/if}}
     {{/unless}}
   });
 
@@ -261,7 +184,6 @@ const metaPixelTemplate = createTemplate({
       // Standard e-commerce parameters
       if (data.value || data.total_amount || data.amount) {
         eventData.value = data.value || data.total_amount || data.amount;
-        eventData.currency = '{{currency}}';
       }
 
       // Product data
@@ -276,7 +198,7 @@ const metaPixelTemplate = createTemplate({
         
         if (data.product.price) {
           eventData.value = data.product.price.effective;
-          eventData.currency = data.product.price.currency_code || '{{currency}}';
+          eventData.currency = data.product.price.currency_code;
         }
       }
 
@@ -310,7 +232,7 @@ const metaPixelTemplate = createTemplate({
 
         if (data.order.total_details) {
           eventData.value = data.order.total_details.total;
-          eventData.currency = data.order.total_details.currency || '{{currency}}';
+          eventData.currency = data.order.total_details.currency;
         }
       }
 
@@ -353,14 +275,9 @@ const metaPixelTemplate = createTemplate({
       }
       {{else}}
       // Direct Meta Pixel tracking
-      if (!{{trackCustomEvents}} || !window.fbq) return;
+      if (!window.fbq) return;
       
-      {{#if testEventCode}}
-      fbq('trackSingle', '{{pixelId}}', eventName, eventData, '{{testEventCode}}');
-      {{else}}
       fbq('track', eventName, eventData);
-      {{/if}}
-      
       console.log('Meta Pixel Event:', eventName, eventData);
       {{/if}}
     };
@@ -390,12 +307,7 @@ const metaPixelTemplate = createTemplate({
     enableConversionsApi: 'enable_conversions_api',
     conversionsApiPixelId: 'conversions_api_pixel_id',
     accessToken: 'access_token',
-    testEventCode: 'test_event_code',
-    enableAdvancedMatching: 'advanced_matching',
-    enableAutomaticMatching: 'automatic_matching',
-    trackPageView: 'track_pageview',
-    trackCustomEvents: 'track_custom_events',
-    currency: 'default_currency'
+    testEventCode: 'test_event_code'
   },
   layout: {
     columns: 2,
