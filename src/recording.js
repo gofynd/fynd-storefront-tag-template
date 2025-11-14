@@ -5,10 +5,10 @@ const fullstoryTemplate = require('./templates/fullstory');
 const mouseflowTemplate = require('./templates/mouseflow');
 const logrocketTemplate = require('./templates/logrocket');
 
-// module.exports = {
-//   hotjar: hotjarTemplate,
-//   crazyegg: crazyeggTemplate,
-//   fullstory: fullstoryTemplate,
-//   mouseflow: mouseflowTemplate,
-//   logrocket: logrocketTemplate
-// }; 
+module.exports = {
+  hotjar: hotjarTemplate,
+  crazyegg: crazyeggTemplate,
+  fullstory: fullstoryTemplate,
+  mouseflow: mouseflowTemplate,
+  logrocket: logrocketTemplate
+}; 
