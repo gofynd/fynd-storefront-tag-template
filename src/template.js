@@ -69,51 +69,51 @@ const webengageTemplate = require('./templates/webengage');
 
 const templates = {
   // Analytics
-  gtm: gtmTemplate,
+  // gtm: gtmTemplate,
   ga4: ga4Template,
-  amplitude: amplitudeTemplate,
-  adobeAnalytics: adobeAnalyticsTemplate,
-  mixpanel: mixpanelTemplate,
-  heap: heapTemplate,
-  adobeLaunch: adobeLaunchTemplate,
-  segment: segmentTemplate,
-  mparticle: mparticleTemplate,
-  quantcast: quantcastTemplate,
-  posthog: posthogTemplate,
-  metaPixel: metaPixelTemplate,
+  // amplitude: amplitudeTemplate,
+  // adobeAnalytics: adobeAnalyticsTemplate,
+  // mixpanel: mixpanelTemplate,
+  // heap: heapTemplate,
+  // adobeLaunch: adobeLaunchTemplate,
+  // segment: segmentTemplate,
+  // mparticle: mparticleTemplate,
+  // quantcast: quantcastTemplate,
+  // posthog: posthogTemplate,
+  // metaPixel: metaPixelTemplate,
   
   // Session Recording & Heatmaps
-  hotjar: hotjarTemplate,
-  crazyegg: crazyeggTemplate,
-  fullstory: fullstoryTemplate,
-  mouseflow: mouseflowTemplate,
-  logrocket: logrocketTemplate,
+  // hotjar: hotjarTemplate,
+  // crazyegg: crazyeggTemplate,
+  // fullstory: fullstoryTemplate,
+  // mouseflow: mouseflowTemplate,
+  // logrocket: logrocketTemplate,
   
   // A/B Testing & Personalization
-  optimizely: optimizelyTemplate,
-  adobeTarget: adobeTargetTemplate,
-  abTasty: abTastyTemplate,
+  // optimizely: optimizelyTemplate,
+  // adobeTarget: adobeTargetTemplate,
+  // abTasty: abTastyTemplate,
   
   // Customer Engagement
-  clevertap: clevertapTemplate,
-  moengage: moengageTemplate,
-  webengage: webengageTemplate,
-  pushengage: pushengageTemplate,
-  notifyvisitors: notifyvisitorsTemplate,
-  intercom: intercomTemplate,
+  // clevertap: clevertapTemplate,
+  // moengage: moengageTemplate,
+  // webengage: webengageTemplate,
+  // pushengage: pushengageTemplate,
+  // notifyvisitors: notifyvisitorsTemplate,
+  // intercom: intercomTemplate,
   
   // Surveys & Feedback
-  qualaroo: qualarooTemplate,
-  survicate: survicateTemplate,
-  typeform: typeformTemplate,
-  usabilla: usabillaTemplate,
+  // qualaroo: qualarooTemplate,
+  // survicate: survicateTemplate,
+  // typeform: typeformTemplate,
+  // usabilla: usabillaTemplate,
   
   // Customer Success
-  totango: totangoTemplate,
+  // totango: totangoTemplate,
   
   // Error Tracking
-  sentry: sentryTemplate,
-  trackjs: trackjsTemplate
+  // sentry: sentryTemplate,
+  // trackjs: trackjsTemplate
 };
 
 module.exports = templates; 
