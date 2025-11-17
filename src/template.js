@@ -68,52 +68,54 @@ const usabillaTemplate = require('./templates/usabilla');
 const webengageTemplate = require('./templates/webengage');
 
 const templates = {
-  // Analytics
-  // gtm: gtmTemplate,
-  ga4: ga4Template,
-  // amplitude: amplitudeTemplate,
-  // adobeAnalytics: adobeAnalyticsTemplate,
-  // mixpanel: mixpanelTemplate,
-  // heap: heapTemplate,
-  // adobeLaunch: adobeLaunchTemplate,
-  // segment: segmentTemplate,
-  // mparticle: mparticleTemplate,
-  // quantcast: quantcastTemplate,
-  // posthog: posthogTemplate,
-  // metaPixel: metaPixelTemplate,
-  
-  // Session Recording & Heatmaps
-  // hotjar: hotjarTemplate,
-  // crazyegg: crazyeggTemplate,
-  // fullstory: fullstoryTemplate,
-  // mouseflow: mouseflowTemplate,
-  // logrocket: logrocketTemplate,
-  
-  // A/B Testing & Personalization
-  // optimizely: optimizelyTemplate,
-  // adobeTarget: adobeTargetTemplate,
-  // abTasty: abTastyTemplate,
-  
-  // Customer Engagement
-  // clevertap: clevertapTemplate,
-  // moengage: moengageTemplate,
-  // webengage: webengageTemplate,
-  // pushengage: pushengageTemplate,
-  // notifyvisitors: notifyvisitorsTemplate,
-  // intercom: intercomTemplate,
-  
-  // Surveys & Feedback
-  // qualaroo: qualarooTemplate,
-  // survicate: survicateTemplate,
-  // typeform: typeformTemplate,
-  // usabilla: usabillaTemplate,
-  
-  // Customer Success
-  // totango: totangoTemplate,
-  
-  // Error Tracking
-  // sentry: sentryTemplate,
-  // trackjs: trackjsTemplate
+  items: [
+    // Analytics
+    // { template_name: 'gtm', ...gtmTemplate },
+    { template_name: 'ga4', ...ga4Template },
+    // { template_name: 'amplitude', ...amplitudeTemplate },
+    // { template_name: 'adobeAnalytics', ...adobeAnalyticsTemplate },
+    // { template_name: 'mixpanel', ...mixpanelTemplate },
+    // { template_name: 'heap', ...heapTemplate },
+    // { template_name: 'adobeLaunch', ...adobeLaunchTemplate },
+    // { template_name: 'segment', ...segmentTemplate },
+    // { template_name: 'mparticle', ...mparticleTemplate },
+    // { template_name: 'quantcast', ...quantcastTemplate },
+    // { template_name: 'posthog', ...posthogTemplate },
+    // { template_name: 'metaPixel', ...metaPixelTemplate },
+    
+    // Session Recording & Heatmaps
+    // { template_name: 'hotjar', ...hotjarTemplate },
+    // { template_name: 'crazyegg', ...crazyeggTemplate },
+    // { template_name: 'fullstory', ...fullstoryTemplate },
+    // { template_name: 'mouseflow', ...mouseflowTemplate },
+    // { template_name: 'logrocket', ...logrocketTemplate },
+    
+    // A/B Testing & Personalization
+    // { template_name: 'optimizely', ...optimizelyTemplate },
+    // { template_name: 'adobeTarget', ...adobeTargetTemplate },
+    // { template_name: 'abTasty', ...abTastyTemplate },
+    
+    // Customer Engagement
+    // { template_name: 'clevertap', ...clevertapTemplate },
+    // { template_name: 'moengage', ...moengageTemplate },
+    // { template_name: 'webengage', ...webengageTemplate },
+    // { template_name: 'pushengage', ...pushengageTemplate },
+    // { template_name: 'notifyvisitors', ...notifyvisitorsTemplate },
+    // { template_name: 'intercom', ...intercomTemplate },
+    
+    // Surveys & Feedback
+    // { template_name: 'qualaroo', ...qualarooTemplate },
+    // { template_name: 'survicate', ...survicateTemplate },
+    // { template_name: 'typeform', ...typeformTemplate },
+    // { template_name: 'usabilla', ...usabillaTemplate },
+    
+    // Customer Success
+    // { template_name: 'totango', ...totangoTemplate },
+    
+    // Error Tracking
+    // { template_name: 'sentry', ...sentryTemplate },
+    // { template_name: 'trackjs', ...trackjsTemplate }
+  ]
 };
 
 module.exports = templates; 
