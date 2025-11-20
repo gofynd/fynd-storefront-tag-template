@@ -19,7 +19,7 @@ const survicateTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/survicate.com',
+    image: 'https://logo.clearbit.com/survicate.com',
     note: '**Survicate** provides website surveys, email surveys, in-app surveys, and NPS tracking. Find your Workspace Key in Settings → Setup & Targeting → Install Survicate.',
     help_link: {
       text: 'Learn more about Survicate implementation in the',

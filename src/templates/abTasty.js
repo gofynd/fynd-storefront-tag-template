@@ -19,7 +19,7 @@ const abTastyTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/abtasty.com',
+    image: 'https://logo.clearbit.com/abtasty.com',
     note: '**AB Tasty** provides A/B testing, personalization, AI-powered recommendations, and feature flags. Find your Account ID in Settings → Account.',
     help_link: {
       text: 'Learn more about AB Tasty implementation in the',

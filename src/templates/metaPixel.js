@@ -299,7 +299,7 @@ const metaPixelTemplate = createTemplate({
   consumeEvent();`,
 
   // Optional keys
-  img: "https://cdn.fynd.com/v2/falling-surf-7c8bb8/fyndnp/wrkr/x5/misc/pictures/free-icon/original/PSpnazzPe-ezl6UPQ-U-logo.png",
+  image: "https://cdn.fynd.com/v2/falling-surf-7c8bb8/fyndnp/wrkr/x5/misc/pictures/free-icon/original/PSpnazzPe-ezl6UPQ-U-logo.png",
   note: "Meta Pixel tracks conversions from Facebook and Instagram ads. You can either use GTM to manage Pixel events or integrate Meta Pixel directly. For Conversions API, you'll need an Access Token from Facebook Business Manager. Find your Pixel ID in Facebook Events Manager under Data Sources > Pixels.",
   field_mappings: {
     useGTM: 'use_gtm',

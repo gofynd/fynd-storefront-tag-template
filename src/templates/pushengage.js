@@ -11,7 +11,7 @@ const pushengageTemplate = createTemplate({
   template_id: "1018",
   template_version: "1.0.0",
   category: 'engagement',
-  img: "https://logo.clearbit.com/pushengage.com",
+  image: "https://logo.clearbit.com/pushengage.com",
   note: "Find your App ID in Installation → Web Installation. PushEngage helps re-engage users with web push notifications.",
   help_link: {
     text: "Learn more about PushEngage installation in the",

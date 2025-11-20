@@ -19,7 +19,7 @@ const intercomTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/intercom.com',
+    image: 'https://logo.clearbit.com/intercom.com',
     note: '**Intercom** provides live chat, customer support, and marketing automation. Find your App ID in Settings → Installation → Web.',
     help_link: {
       text: 'Learn more about Intercom installation in the',

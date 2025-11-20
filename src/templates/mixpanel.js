@@ -19,7 +19,7 @@ const mixpanelTemplate = createTemplate({
     async: 'true'
   },
   compatible_engines: ['react', 'vue2'],
-  img: 'https://logo.clearbit.com/mixpanel.com',
+  image: 'https://logo.clearbit.com/mixpanel.com',
   fields: [
     {
       name: 'projectToken',

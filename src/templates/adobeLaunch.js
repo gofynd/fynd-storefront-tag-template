@@ -19,7 +19,7 @@ const adobeLaunchTemplate = createTemplate({
     async: 'true'
   },
   compatible_engines: ['react', 'vue2'],
-  img: 'https://logo.clearbit.com/adobe.com',
+  image: 'https://logo.clearbit.com/adobe.com',
   note: '**Adobe Launch** (now Adobe Experience Platform Tags) is Adobe\'s next-generation tag management system. Get your embed code from the Environments tab in your Launch property.',
   help_link: {
     text: 'Learn more about Adobe Launch implementation in the',

@@ -11,7 +11,7 @@ const mouseflowTemplate = createTemplate({
   template_id: "1014",
   template_version: "1.0.0",
   category: 'recording',
-  img: "https://logo.clearbit.com/mouseflow.com",
+  image: "https://logo.clearbit.com/mouseflow.com",
   note: "Find your Website ID in your Mouseflow dashboard. Mouseflow records user sessions and generates heatmaps for UX insights.",
   help_link: {
     text: "Learn more about Mouseflow installation in the",

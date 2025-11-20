@@ -19,7 +19,7 @@ const optimizelyTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/optimizely.com',
+    image: 'https://logo.clearbit.com/optimizely.com',
     note: '**Optimizely** enables A/B testing, multivariate testing, and personalization experiments. Find your Project ID in Settings → Implementation.',
     help_link: {
       text: 'Learn more about Optimizely Web implementation in the',

@@ -8,7 +8,7 @@ const amplitudeTemplate = createTemplate({
   name: "Amplitude",
   path: "amplitude-tag",
   description: "Track user behavior and analyze product analytics with Amplitude.",
-  img: "https://cdn.brandfetch.io/idJfYlnlFP/w/400/h/400/theme/dark/icon.png?k=bfHSJFAPEG",
+  image: "https://cdn.brandfetch.io/idJfYlnlFP/w/400/h/400/theme/dark/icon.png?k=bfHSJFAPEG",
   note: "**Important:** You'll need your Amplitude API Key from your project settings. For EU data residency, make sure to select the EU server zone and use an API key from an Amplitude EU project.",
   help_link: {
     text: "Learn more about Amplitude setup and configuration in the",

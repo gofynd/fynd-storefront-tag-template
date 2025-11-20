@@ -19,7 +19,7 @@ const qualarooTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/qualaroo.com',
+    image: 'https://logo.clearbit.com/qualaroo.com',
     note: '**Qualaroo** provides targeted surveys, NPS feedback, exit intent surveys, and user research tools. Find your Site ID in Install Code section.',
     help_link: {
       text: 'Learn more about Qualaroo implementation in the',

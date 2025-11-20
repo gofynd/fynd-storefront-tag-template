@@ -19,7 +19,7 @@ const quantcastTemplate = createTemplate({
     async: 'true'
   },
   compatible_engines: ['react', 'vue2'],
-  img: 'https://logo.clearbit.com/quantcast.com',
+  image: 'https://logo.clearbit.com/quantcast.com',
   note: '**Quantcast** provides audience measurement and demographic insights. Find your P-Code in your Quantcast Publisher account under "Get Quantcast Tag".',
   help_link: {
     text: 'Learn more about Quantcast Measure in the',

@@ -19,7 +19,7 @@ const logrocketTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/logrocket.com',
+    image: 'https://logo.clearbit.com/logrocket.com',
     note: '**LogRocket** records user sessions with console logs, network requests, and Redux state. Find your App ID in Settings → Project Setup.',
     help_link: {
       text: 'Learn more about LogRocket setup in the',

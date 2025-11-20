@@ -8,7 +8,7 @@ const adobeAnalyticsTemplate = createTemplate({
   name: "Adobe Analytics",
   path: "adobe-analytics",
   description: "Track visitor behavior and measure site performance with Adobe Analytics.",
-  img: "https://www.adobe.com/content/dam/cc/icons/Adobe_Corporate_Web_Logo.svg",
+  image: "https://www.adobe.com/content/dam/cc/icons/Adobe_Corporate_Web_Logo.svg",
   note: "**Important:** You'll need your Adobe Analytics Report Suite ID from the Admin Console. The tracking server is typically in the format: [namespace].sc.omtrdc.net",
   help_link: {
     text: "Learn more about Adobe Analytics implementation in the",

@@ -19,7 +19,7 @@ const totangoTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/totango.com',
+    image: 'https://logo.clearbit.com/totango.com',
     note: '**Totango** provides customer success analytics, health scoring, and engagement tracking. Find your Service ID in Settings → General → Tracking Code.',
     help_link: {
       text: 'Learn more about Totango implementation in the',

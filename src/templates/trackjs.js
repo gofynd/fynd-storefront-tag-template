@@ -19,7 +19,7 @@ const trackjsTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/trackjs.com',
+    image: 'https://logo.clearbit.com/trackjs.com',
     note: '**TrackJS** monitors JavaScript errors with detailed telemetry and session replay. Find your Token in Settings → Tokens.',
     help_link: {
       text: 'Learn more about TrackJS installation in the',

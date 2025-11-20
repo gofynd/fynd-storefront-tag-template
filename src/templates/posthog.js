@@ -190,7 +190,7 @@ const posthogTemplate = createTemplate({
   consumeEvent();`,
 
   // Optional keys
-  img: "https://posthog.com/brand/posthog-logo.svg",
+  image: "https://posthog.com/brand/posthog-logo.svg",
   note: "PostHog provides product analytics, session recordings, feature flags, and A/B testing. The API key can be found in your PostHog project settings.",
   field_mappings: {
     apiKey: 'api_key',

@@ -6,7 +6,7 @@ const sentryTemplate = {
   name: 'Sentry',
   path: "sentry-tag",
   description: "Monitor errors and performance with Sentry.",
-  img: "https://sentry-brand.storage.googleapis.com/sentry-logo-black.png",
+  image: "https://sentry-brand.storage.googleapis.com/sentry-logo-black.png",
   note:"The DSN for your Sentry account is available on the Sentry Dashboard in Settings > Project > Client Keys (*this instructions needs to be changed according to Sentry documentation)",
   help_link: {
     text: "Learn the steps to connect with Sentry by reading the article on",

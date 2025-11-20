@@ -14,7 +14,7 @@
  * - script: string - JavaScript template with {{placeholders}}
  * 
  * OPTIONAL KEYS:
- * - img: string - Logo/icon URL
+ * - image: string - Logo/icon URL
  * - note: string - Help text (supports **markdown** for bold)
  * - help_link: object - { text, url, label }
  * - type: string - Script type (default: 'js')

@@ -19,7 +19,7 @@ const adobeTargetTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/adobe.com',
+    image: 'https://logo.clearbit.com/adobe.com',
     note: '**Adobe Target** provides A/B testing, multivariate testing, and AI-powered personalization. Find your Client Code in Administration → Implementation.',
     help_link: {
       text: 'Learn more about Adobe Target implementation in the',

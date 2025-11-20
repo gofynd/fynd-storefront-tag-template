@@ -19,7 +19,7 @@ const usabillaTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/getfeedback.com',
+    image: 'https://logo.clearbit.com/getfeedback.com',
     note: '**Usabilla** (GetFeedback) provides feedback buttons, targeted surveys, and user experience insights. Find your Button ID in the Usabilla dashboard under Websites → Feedback button → Setup.',
     help_link: {
       text: 'Learn more about Usabilla implementation in the',

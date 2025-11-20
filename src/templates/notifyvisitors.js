@@ -19,7 +19,7 @@ const notifyvisitorsTemplate = createTemplate({
     async: 'true'
   },
   compatible_engines: ['react', 'vue2'],
-  img: 'https://logo.clearbit.com/notifyvisitors.com',
+  image: 'https://logo.clearbit.com/notifyvisitors.com',
   note: '**NotifyVisitors** provides multi-channel customer engagement including web push, email, SMS, on-site messages, and surveys. Find your Brand ID and Secret Key in Settings → Integration.',
   help_link: {
     text: 'Learn more about NotifyVisitors integration in the',

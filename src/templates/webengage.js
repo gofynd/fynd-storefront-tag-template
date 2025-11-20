@@ -11,7 +11,7 @@ const webengageTemplate = createTemplate({
   template_id: "1017",
   template_version: "1.0.0",
   category: 'engagement',
-  img: "https://logo.clearbit.com/webengage.com",
+  image: "https://logo.clearbit.com/webengage.com",
   note: "Find your License Code in Account Setup → Integration → Web SDK. WebEngage helps personalize user journeys.",
   help_link: {
     text: "Learn more about WebEngage integration in the",

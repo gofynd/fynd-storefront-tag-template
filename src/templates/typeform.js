@@ -19,7 +19,7 @@ const typeformTemplate = createTemplate({
       async: 'true'
     },
     compatible_engines: ['react', 'vue2'],
-    img: 'https://logo.clearbit.com/typeform.com',
+    image: 'https://logo.clearbit.com/typeform.com',
     note: '**Typeform** provides conversational forms, surveys, quizzes, and lead generation tools. Get your Form ID from Share → Embed in your Typeform dashboard.',
     help_link: {
       text: 'Learn more about Typeform embed options in the',
