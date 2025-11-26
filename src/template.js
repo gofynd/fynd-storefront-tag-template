@@ -70,7 +70,7 @@ const webengageTemplate = require('./templates/webengage');
 const templates = {
   items: [
     // Analytics
-    // { template_name: 'gtm', ...gtmTemplate },
+    { template_name: 'gtm', ...gtmTemplate },
     { template_name: 'ga4', ...ga4Template },
     // { template_name: 'amplitude', ...amplitudeTemplate },
     // { template_name: 'adobeAnalytics', ...adobeAnalyticsTemplate },

@@ -14,7 +14,7 @@ const posthogTemplate = require('./templates/posthog');
 const metaPixelTemplate = require('./templates/metaPixel');
 
 module.exports = {
-  // gtm: gtmTemplate,
+  gtm: gtmTemplate,
   ga4: ga4Template,
   // amplitude: amplitudeTemplate,
   // adobeAnalytics: adobeAnalyticsTemplate,
