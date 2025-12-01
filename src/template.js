@@ -113,7 +113,7 @@ const templates = {
     // { template_name: 'totango', ...totangoTemplate },
     
     // Error Tracking
-    // { template_name: 'sentry', ...sentryTemplate },
+    { template_name: 'sentry', ...sentryTemplate },
     // { template_name: 'trackjs', ...trackjsTemplate }
   ]
 };
