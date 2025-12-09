@@ -40,7 +40,7 @@ const sentryTemplate = {
       size: 'full',
       description: 'Find in Settings → Projects → Client Keys (DSN).',
       validation: {
-        pattern: "/^https?:\/\/[\w.@:\/\-]+$/",
+        pattern: "/^https?:\\/\\/[\\w.@:\\/\\-]+$/",
         message: 'Must be a valid DSN URL',
       },
     },
@@ -55,7 +55,8 @@ const sentryTemplate = {
       },
       default: [
         "chrome-extension://*",
-        "moz-extension://*"
+        "moz-extension://*",
+        "https://store-cdn1.fynd.com/*"
       ],
       size: 'full',
       useTooltip: false,  // Show description as text for array fields
@@ -66,7 +67,7 @@ const sentryTemplate = {
         input_size: 'large',  // Size for the input within array field
         button_size: 'small', // Size for the button within array field
         validation: {
-          pattern: "/^(\*|https?:\/\/)?[a-z\d\-.*:/_@]+$/i",
+          pattern: "/^(\\*|https?:\\/\\/)?[a-z\\d\\-.*:\\/_@]+$/i",
           message: 'Enter a valid URL pattern (wildcards * are supported)'
         },
         events: {
@@ -93,17 +94,17 @@ const sentryTemplate = {
                 script.onload = () => {
                     // Process excluded URLs and convert to RegExp patterns
                     const excludedUrlsArray = [{{#each excludedUrls}}'{{this}}'{{#unless @last}},{{/unless}}{{/each}}];
-                    const specialChars = ['.', '+', '?', '^', '$', '(', ')', '|', '[', ']', '\\\\'];
+                    const specialChars = ['.', '+', '?', '^', '$', '(', ')', '|', '[', ']', '\\\\\\\\'];
                     const denyUrlsRegex = excludedUrlsArray
                         .filter(url => url && url.trim() !== '')
                         .map(url => {
                             // Escape special regex characters except * which we'll use as wildcard
                             let escaped = url;
                             specialChars.forEach(char => {
-                                escaped = escaped.split(char).join('\\\\' + char);
+                                escaped = escaped.split(char).join('\\\\\\\\' + char);
                             });
                             // Convert * to .* for wildcard matching
-                            const pattern = escaped.replace(/\\*/g, '.*');
+                            const pattern = escaped.replace(/\\\\*/g, '.*');
                             return new RegExp(pattern);
                         });
 
@@ -112,7 +113,7 @@ const sentryTemplate = {
                         sendDefaultPii: true,
                         integrations: [
                             new Sentry.BrowserTracing({
-                                tracePropagationTargets: ["localhost", /^\//],
+                                tracePropagationTargets: ["localhost", /^\\\\/],
                             }),
                             new Sentry.Replay({
                                 maskAllText: true,
