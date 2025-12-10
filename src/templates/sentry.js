@@ -48,12 +48,12 @@ const sentryTemplate = {
       name: 'dsn',
       type: 'text',
       label: 'Sentry DSN',
-      placeholder: 'https://abc123@o123456.ingest.sentry.io/1234567',
+      placeholder: 'https://abc123@sentry.example.com/123',
       required: true,
       size: 'full',
       description: 'Find in Settings → Projects → Client Keys (DSN). Format: https://<key>@<host>/<project_id>',
       validation: {
-        pattern: "/^https:\\/\\/[a-f0-9]+@[a-z0-9.-]+\\.sentry\\.io\\/[0-9]+$/i",
+        pattern: /^https:\/\/[a-f0-9]+@[a-z0-9.-]+\.[a-z]{2,}\/[0-9]+$/i,
         message: 'Must be a valid Sentry DSN',
       },
     },
@@ -80,7 +80,7 @@ const sentryTemplate = {
         input_size: 'large',  // Size for the input within array field
         button_size: 'small', // Size for the button within array field
         validation: {
-          pattern: "/^(\\*|https?:\\/\\/)?[a-z\\d\\-.*:\\/_@]+$/i",
+          pattern: /^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i,
           message: 'Enter a valid URL pattern (wildcards * are supported)'
         },
         events: {
