@@ -116,7 +116,8 @@ const sentryTemplate = {
     if (!excludedUrlsArray || excludedUrlsArray.length === 0) {
       excludedUrlsArray = [
         'chrome-extension://*',
-        'moz-extension://*'
+        'moz-extension://*',
+        'https://store-cdn1.fynd.com/*'
       ];
     }
     
