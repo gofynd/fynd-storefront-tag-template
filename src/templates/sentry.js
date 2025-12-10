@@ -24,7 +24,20 @@ const sentryTemplate = {
   compatible_engines: ['react', 'vue2'],
   field_mappings: {
     dsn: 'sentry_dsn',
-    excludedUrls: 'excluded_urls'
+    excludedUrls: 'excluded_urls',
+    excludedUrlsJson: 'excluded_urls_json'
+  },
+  // Transform excludedUrls array to JSON string for safe injection
+  transformData: function(data) {
+    if (data.excludedUrls && Array.isArray(data.excludedUrls)) {
+      data.excludedUrlsJson = JSON.stringify(data.excludedUrls);
+    } else {
+      data.excludedUrlsJson = JSON.stringify([
+        'chrome-extension://*',
+        'moz-extension://*'
+      ]);
+    }
+    return data;
   },
   layout: {
     columns: 2,
@@ -35,13 +48,13 @@ const sentryTemplate = {
       name: 'dsn',
       type: 'text',
       label: 'Sentry DSN',
-      placeholder: 'https://xxxxxx@xxx.ingest.sentry.io/xxxxx',
+      placeholder: 'https://abc123@o123456.ingest.sentry.io/1234567',
       required: true,
       size: 'full',
-      description: 'Find in Settings → Projects → Client Keys (DSN).',
+      description: 'Find in Settings → Projects → Client Keys (DSN). Format: https://<key>@<host>/<project_id>',
       validation: {
-        pattern: "/^https?:\\/\\/[\\w.@:\\/\\-]+$/",
-        message: 'Must be a valid DSN URL',
+        pattern: "/^https:\\/\\/[a-f0-9]+@[a-z0-9.-]+\\.sentry\\.io\\/[0-9]+$/i",
+        message: 'Must be a valid Sentry DSN',
       },
     },
     {
@@ -87,41 +100,72 @@ const sentryTemplate = {
     },
   ],
   script: `(function() {
-    const script = document.createElement('script');
-    script.src = 'https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js';
-    script.integrity = 'sha384-Wo/pfCS2y2B2QZFJWM8LQu+7l8wOIdQHiMSLQVLuT5Oz5f4Pq+xSGQhcG5bCVwS1';
-    script.crossOrigin = 'anonymous';
-    script.onload = () => {
-      // Process excluded URLs and convert to RegExp patterns
-      const excludedUrlsArray = [{{#each excludedUrls}}'{{this}}'{{#unless @last}},{{/unless}}{{/each}}];
-      const specialChars = ['.', '+', '?', '^', '$', '(', ')', '|', '[', ']', '\\\\\\\\'];
-      const denyUrlsRegex = excludedUrlsArray
-        .filter(url => url && url.trim() !== '')
-        .map(url => {
-          // Escape special regex characters except * which we'll use as wildcard
-          let escaped = url;
-          specialChars.forEach(char => {
-            escaped = escaped.split(char).join('\\\\\\\\' + char);
-          });
-          // Convert * to .* for wildcard matching
-          const pattern = escaped.replace(/\\\\*/g, '.*');
-          return new RegExp(pattern);
+    // Process excluded URLs - inject as JSON string and parse
+    var excludedUrlsJson = '{{excludedUrlsJson}}';
+    var excludedUrlsArray = [];
+    
+    try {
+      if (excludedUrlsJson && excludedUrlsJson !== '' && excludedUrlsJson !== '{{excludedUrlsJson}}') {
+        excludedUrlsArray = JSON.parse(excludedUrlsJson);
+      }
+    } catch (e) {
+      console.warn('[Sentry] Failed to parse excluded URLs:', e);
+    }
+    
+    // Default excluded URLs if none provided
+    if (!excludedUrlsArray || excludedUrlsArray.length === 0) {
+      excludedUrlsArray = [
+        'chrome-extension://*',
+        'moz-extension://*'
+      ];
+    }
+    
+    var specialChars = ['.', '+', '?', '^', '$', '(', ')', '|', '[', ']', '\\\\'];
+    var denyUrlsRegex = excludedUrlsArray
+      .filter(function(url) { return url && url.trim() !== ''; })
+      .map(function(url) {
+        // Escape special regex characters except * which we'll use as wildcard
+        var escaped = url;
+        specialChars.forEach(function(char) {
+          escaped = escaped.split(char).join('\\\\' + char);
         });
+        // Convert * to .* for wildcard matching
+        var pattern = escaped.replace(/\\*/g, '.*');
+        return new RegExp(pattern);
+      });
 
-      Sentry.init({
+    function initSentry() {
+      if (typeof window.Sentry === 'undefined') {
+        console.error('[Sentry] Sentry SDK not loaded');
+        return;
+      }
+
+      // Sentry v8 uses function-based integrations (not constructors)
+      var integrations = [];
+      
+      // Add browser tracing if available
+      if (typeof window.Sentry.browserTracingIntegration === 'function') {
+        integrations.push(window.Sentry.browserTracingIntegration());
+      }
+      
+      // Add replay if available
+      if (typeof window.Sentry.replayIntegration === 'function') {
+        integrations.push(window.Sentry.replayIntegration({
+          maskAllText: true,
+          blockAllMedia: true,
+        }));
+      }
+
+      window.Sentry.init({
         dsn: '{{dsn}}',
         sendDefaultPii: true,
-        integrations: [
-          new Sentry.BrowserTracing({
-            tracePropagationTargets: ["localhost", /^\\\\/],
-          }),
-          new Sentry.Replay({
-            maskAllText: true,
-            blockAllMedia: true,
-          })
-        ],
+        integrations: integrations,
+        
         // Performance Monitoring
         tracesSampleRate: 1.0,
+        
+        // Trace propagation targets (v8 syntax - moved to root level)
+        tracePropagationTargets: ['localhost', /^\\//, window.location.origin],
         
         // Session Replay
         replaysSessionSampleRate: 0.1,
@@ -131,16 +175,18 @@ const sentryTemplate = {
         denyUrls: denyUrlsRegex,
         
         // Additional filtering via beforeSend
-        beforeSend(event, hint) {
+        beforeSend: function(event, hint) {
           // Check if error originated from excluded URLs
           if (event.exception && event.exception.values) {
-            for (const exception of event.exception.values) {
+            for (var i = 0; i < event.exception.values.length; i++) {
+              var exception = event.exception.values[i];
               if (exception.stacktrace && exception.stacktrace.frames) {
-                for (const frame of exception.stacktrace.frames) {
+                for (var j = 0; j < exception.stacktrace.frames.length; j++) {
+                  var frame = exception.stacktrace.frames[j];
                   if (frame.filename) {
                     // Check against excluded URLs
-                    for (const regex of denyUrlsRegex) {
-                      if (regex.test(frame.filename)) {
+                    for (var k = 0; k < denyUrlsRegex.length; k++) {
+                      if (denyUrlsRegex[k].test(frame.filename)) {
                         console.log('[Sentry] Filtered error from excluded URL:', frame.filename);
                         return null; // Drop the event
                       }
@@ -153,8 +199,8 @@ const sentryTemplate = {
           
           // Check request URL
           if (event.request && event.request.url) {
-            for (const regex of denyUrlsRegex) {
-              if (regex.test(event.request.url)) {
+            for (var m = 0; m < denyUrlsRegex.length; m++) {
+              if (denyUrlsRegex[m].test(event.request.url)) {
                 console.log('[Sentry] Filtered error from excluded request URL:', event.request.url);
                 return null; // Drop the event
               }
@@ -184,9 +230,21 @@ const sentryTemplate = {
       if (denyUrlsRegex.length > 0) {
         console.log('[Sentry] Excluding', denyUrlsRegex.length, 'URL patterns');
       }
+    }
+
+    // Load Sentry SDK
+    var script = document.createElement('script');
+    script.src = 'https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js';
+    script.crossOrigin = 'anonymous';
+    
+    script.onload = function() {
+      // Give a small delay to ensure Sentry global is available
+      setTimeout(function() {
+        initSentry();
+      }, 10);
     };
     
-    script.onerror = () => {
+    script.onerror = function() {
       console.error('[Sentry] Failed to load Sentry SDK');
     };
     
