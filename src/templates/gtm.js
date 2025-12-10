@@ -55,20 +55,8 @@ const gtmTemplate = createTemplate({
     // Track initial page view
     trackPageView();
 
-    // SPA Navigation tracking
-    let lastTrackedPath = window.location.pathname + window.location.search;
-
     function trackPageView() {
       const currentPath = window.location.pathname + window.location.search;
-      
-      // Avoid duplicate page_view for the same path
-      if (currentPath === lastTrackedPath && window._gtmInitialPageTracked) {
-        console.log('[GTM] Skipping duplicate page_view for:', currentPath);
-        return;
-      }
-      
-      lastTrackedPath = currentPath;
-      window._gtmInitialPageTracked = true;
       
       // Push virtual page view to dataLayer
       dataLayer.push({
@@ -102,55 +90,6 @@ const gtmTemplate = createTemplate({
   });
 
   function consumeEvent() {
-    // Event deduplication cache
-    const eventCache = new Map();
-    const DEDUP_TIMEOUT = 1000; // 1 second deduplication window
-
-    // Generate unique key for event deduplication
-    const getEventKey = (eventName, data) => {
-      let key = eventName;
-      
-      // Add identifying data to key based on event type
-      if (data.product) {
-        key += '_' + (data.product.id || data.product.uid || data.product.slug);
-      }
-      if (data.order && data.order.order_id) {
-        key += '_' + data.order.order_id;
-      }
-      if (data.cart && data.cart.id) {
-        key += '_' + data.cart.id;
-      }
-      if (data.query || data.search_query) {
-        key += '_' + (data.query || data.search_query);
-      }
-      // For list views, include the page path
-      if (eventName === 'view_item_list') {
-        key += '_' + window.location.pathname;
-      }
-      
-      return key;
-    };
-
-    // Check if event is duplicate
-    const isDuplicateEvent = (eventKey) => {
-      const now = Date.now();
-      const lastTracked = eventCache.get(eventKey);
-      
-      if (lastTracked && (now - lastTracked) < DEDUP_TIMEOUT) {
-        return true;
-      }
-      
-      // Clean old entries from cache
-      eventCache.forEach((timestamp, key) => {
-        if (now - timestamp > DEDUP_TIMEOUT * 10) {
-          eventCache.delete(key);
-        }
-      });
-      
-      eventCache.set(eventKey, now);
-      return false;
-    };
-
     const FPI_EVENTS = {
       LOG_IN: "user.login",
       LOG_OUT: "user.logout",
@@ -325,13 +264,6 @@ const gtmTemplate = createTemplate({
       }
 
       const eventData = formatEventData(event, data);
-      const eventKey = getEventKey(eventName, data);
-      
-      // Check for duplicate event
-      if (isDuplicateEvent(eventKey)) {
-        console.log('[GTM] Skipping duplicate event:', eventName, eventKey);
-        return;
-      }
 
       // Clear previous ecommerce data (GA4 best practice)
       dataLayer.push({ ecommerce: null });
