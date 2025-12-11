@@ -83,7 +83,7 @@ const sentryTemplate = {
           return !inputValue || inputValue.trim() === '';
         },
         validation: {
-          pattern: /^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i,
+          pattern: "/^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i",
           message: 'Enter a valid URL pattern (wildcards * are supported)'
         },
         events: {
