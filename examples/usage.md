@@ -1,13 +1,17 @@
 # Fynd Storefront Tag Templates - Usage Examples
 
-This guide provides comprehensive examples of how to use the Fynd Storefront Tag Templates in various scenarios.
+This guide provides comprehensive examples of how to use the Fynd Storefront Tag Templates in various scenarios. This document is intended for form renderer implementation.
 
 ## Table of Contents
 - [Basic Usage](#basic-usage)
 - [Template Structure](#template-structure)
 - [Field Types](#field-types)
-- [Custom Validation](#custom-validation)
+- [Field Configuration](#field-configuration)
+- [Validation](#validation)
 - [Event Handlers](#event-handlers)
+- [Layout Configuration](#layout-configuration)
+- [Data Transformation](#data-transformation)
+- [Script Attributes](#script-attributes)
 - [Creating Custom Templates](#creating-custom-templates)
 
 ## Basic Usage
@@ -28,13 +32,12 @@ const { gtm, sentry, ga4 } = templates;
 ### Accessing Template Properties
 
 ```javascript
-// Get Google Tag Manager template
-const gtmTemplate = templates.gtm;
+const template = templates.gtm;
 
-console.log(gtmTemplate.name);           // "Google Tag Manager"
-console.log(gtmTemplate.template_id);    // "1001"
-console.log(gtmTemplate.fields);         // Array of field configurations
-console.log(gtmTemplate.script);         // Template script with placeholders
+console.log(template.name);           // Display name
+console.log(template.template_id);    // Unique ID
+console.log(template.fields);         // Array of field configurations
+console.log(template.script);         // Template script with placeholders
 ```
 
 ## Template Structure
@@ -53,13 +56,21 @@ Each template follows this structure:
   script: '...',
   
   // Optional fields
-  img: 'https://example.com/logo.png',
-  note: 'Help text for users',
+  image: 'https://example.com/logo.png',
+  note: 'Help text for users (supports **markdown** for bold)',
+  category: 'analytics',  // Template category for grouping
   help_link: {
     text: 'Learn more about',
     url: 'https://docs.example.com',
     label: 'Documentation'
   },
+  type: 'js',           // Script type (default: 'js')
+  sub_type: 'inline',   // Script subtype (default: 'inline')
+  position: 'head',     // Script position (default: 'head')
+  pages: [],            // Pages to include (default: ['all'])
+  excludePages: [],     // Pages to exclude
+  attributes: {},       // Script tag attributes
+  compatible_engines: ['react', 'vue2'],
   field_mappings: {
     fieldName: 'api_field_name'
   },
@@ -67,7 +78,9 @@ Each template follows this structure:
     columns: 2,
     gap: '20px',
     responsive: true
-  }
+  },
+  transformData: function(data) { return data; },  // Data transformation
+  saveButtonDisabled: function(formData, errors, component) { return false; }
 }
 ```
 
@@ -81,7 +94,8 @@ Each template follows this structure:
   label: 'API Key',
   placeholder: 'Enter your API key',
   required: true,
-  size: 'full',
+  size: 'full',        // 'small', 'medium', 'large', 'full'
+  description: 'Description text shown below label',
   validation: {
     pattern: /^[A-Z0-9]{32}$/,
     message: 'Must be 32 alphanumeric characters'
@@ -98,13 +112,32 @@ Each template follows this structure:
   description: 'Add domains to whitelist',
   default: ['example.com'],
   size: 'full',
+  useTooltip: false,   // Show description as text instead of tooltip
+  help_link: {         // Field-level help link
+    url: 'https://docs.example.com/domains',
+    text: 'Learn more about domain configuration'
+  },
   input_config: {
     type: 'text',
     placeholder: 'Enter domain',
     button_text: 'Add Domain',
+    input_size: 'large',   // Size for the input field
+    button_size: 'small',  // Size for the add button
+    button_disabled: function(inputValue) {
+      // Disable button until input has value
+      return !inputValue || inputValue.trim() === '';
+    },
     validation: {
       pattern: /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i,
       message: 'Invalid domain format'
+    },
+    events: {
+      click: function(value, field, formData, component) {
+        console.log('Adding:', value);
+      },
+      remove: function(value, index, field, formData, component) {
+        console.log('Removing:', value, 'at index', index);
+      }
     }
   }
 }
@@ -170,15 +203,75 @@ Each template follows this structure:
 }
 ```
 
-## Custom Validation
+## Field Configuration
 
-### Pattern Validation
+### Field Sizes
 ```javascript
 {
-  name: 'trackingId',
+  size: 'small'   // ~25% width
+  size: 'medium'  // ~50% width
+  size: 'large'   // ~75% width
+  size: 'full'    // 100% width
+}
+```
+
+### Field-level Help Link
+```javascript
+{
+  name: 'fieldName',
   type: 'text',
+  label: 'Field Label',
+  help_link: {
+    url: 'https://docs.example.com/field-help',
+    text: 'Learn more about this field'
+  }
+}
+```
+
+### Tooltip vs Description Text
+```javascript
+{
+  name: 'fieldName',
+  type: 'array',
+  description: 'This is the description text',
+  useTooltip: true,   // true = show as tooltip (default)
+  useTooltip: false   // false = show as inline text below field
+}
+```
+
+### Conditional Fields
+```javascript
+{
+  name: 'apiEndpoint',
+  type: 'text',
+  condition: function(formData) {
+    // Only show if custom environment is selected
+    return formData.environment === 'custom';
+  },
+  visible: function(formData) {
+    // Alternative: use 'visible' property
+    return formData.showAdvanced === true;
+  }
+}
+```
+
+## Validation
+
+### Pattern Validation (String)
+```javascript
+{
   validation: {
-    pattern: /^UA-\d{9}-\d{1}$/,
+    pattern: "/^UA-\\d{9}-\\d{1}$/",  // String format
+    message: 'Format: UA-XXXXXXXXX-X'
+  }
+}
+```
+
+### Pattern Validation (RegExp)
+```javascript
+{
+  validation: {
+    pattern: /^UA-\d{9}-\d{1}$/,  // RegExp object
     message: 'Format: UA-XXXXXXXXX-X'
   }
 }
@@ -187,10 +280,8 @@ Each template follows this structure:
 ### Custom Validation Function
 ```javascript
 {
-  name: 'customField',
-  type: 'text',
   validation: {
-    validate: (value) => {
+    validate: function(value) {
       if (value.length < 10) {
         return 'Must be at least 10 characters';
       }
@@ -203,9 +294,34 @@ Each template follows this structure:
 }
 ```
 
+### Number Validation
+```javascript
+{
+  validation: {
+    min: 0,
+    max: 100,
+    message: 'Must be between 0 and 100'
+  }
+}
+```
+
+### Array Field Input Validation
+```javascript
+{
+  name: 'urls',
+  type: 'array',
+  input_config: {
+    validation: {
+      pattern: /^https?:\/\/.+$/,
+      message: 'Must be a valid URL'
+    }
+  }
+}
+```
+
 ## Event Handlers
 
-### Input Events
+### Text Field Events
 ```javascript
 {
   name: 'domain',
@@ -224,6 +340,10 @@ Each template follows this structure:
     change: function(value, field, formData, component) {
       // Called when value changes
       console.log('Value changed to:', value);
+    },
+    focus: function(value, field, formData, component) {
+      // Called when field receives focus
+      console.log('Field focused');
     }
   }
 }
@@ -237,30 +357,128 @@ Each template follows this structure:
   input_config: {
     events: {
       click: function(value, field, formData, component) {
-        // Before adding item
+        // Called before adding item
         console.log('Adding:', value);
         // Return false to prevent addition
         return value.length > 3;
       },
       remove: function(value, index, field, formData, component) {
-        // Before removing item
+        // Called before removing item
         console.log('Removing:', value, 'at index', index);
+        // Return false to prevent removal
       }
     }
   }
 }
 ```
 
-### Conditional Fields
+### Button Disabled State
 ```javascript
 {
-  name: 'apiEndpoint',
-  type: 'text',
-  condition: function(formData) {
-    // Only show if custom environment is selected
-    return formData.environment === 'custom';
+  name: 'urls',
+  type: 'array',
+  input_config: {
+    button_text: 'Add URL',
+    button_disabled: function(inputValue) {
+      // Return true to disable, false to enable
+      return !inputValue || inputValue.trim() === '';
+    }
   }
 }
+```
+
+## Layout Configuration
+
+### Basic Layout
+```javascript
+{
+  layout: {
+    columns: 2,      // Number of columns (1, 2, 3, etc.)
+    gap: '20px'      // Gap between fields
+  }
+}
+```
+
+### Responsive Layout
+```javascript
+{
+  layout: {
+    columns: 3,
+    gap: '16px',
+    responsive: true  // Enable responsive behavior for mobile
+  }
+}
+```
+
+## Data Transformation
+
+### Transform Data Before Script Injection
+Use `transformData` to modify field values before they are injected into the script:
+
+```javascript
+{
+  transformData: function(data) {
+    // Convert array to JSON string for data attributes
+    if (data.excludedUrls && Array.isArray(data.excludedUrls)) {
+      data.excludedUrlsJson = JSON.stringify(data.excludedUrls);
+    } else {
+      data.excludedUrlsJson = '[]';
+    }
+    
+    // Add computed fields
+    data.timestamp = Date.now();
+    
+    return data;
+  }
+}
+```
+
+## Script Attributes
+
+### Static Attributes
+```javascript
+{
+  attributes: {
+    async: "true",
+    defer: "true",
+    crossorigin: "anonymous"
+  }
+}
+```
+
+### Dynamic Attributes with Placeholders
+```javascript
+{
+  attributes: {
+    async: "true",
+    "data-config": "{{configJson}}",
+    "data-excluded-urls": "{{excludedUrlsJson}}"
+  },
+  transformData: function(data) {
+    data.configJson = JSON.stringify(data.config);
+    data.excludedUrlsJson = JSON.stringify(data.excludedUrls || []);
+    return data;
+  }
+}
+```
+
+### Reading Attributes in Script
+```javascript
+script: `(function() {
+  // Find script element with data attribute
+  var scripts = document.querySelectorAll('script[data-config]');
+  var currentScript = scripts[scripts.length - 1];
+  
+  if (currentScript) {
+    var configData = currentScript.getAttribute('data-config');
+    try {
+      var config = JSON.parse(configData);
+      console.log('Config:', config);
+    } catch (e) {
+      console.warn('Failed to parse config:', e);
+    }
+  }
+})();`
 ```
 
 ## Creating Custom Templates
@@ -273,6 +491,7 @@ const myTemplate = {
   description: 'Custom analytics integration',
   template_id: '2001',
   template_version: '1.0.0',
+  category: 'analytics',
   fields: [
     {
       name: 'accountId',
@@ -296,7 +515,8 @@ const advancedTemplate = {
   description: 'Comprehensive tracking solution',
   template_id: '3001',
   template_version: '2.0.0',
-  img: 'https://example.com/logo.png',
+  category: 'analytics',
+  image: 'https://example.com/logo.png',
   note: 'Configure your tracking settings below. **Required fields are marked with asterisk.**',
   help_link: {
     text: 'Need help? Check our',
@@ -312,6 +532,14 @@ const advancedTemplate = {
     columns: 3,
     gap: '24px',
     responsive: true
+  },
+  attributes: {
+    async: "true",
+    "data-domains": "{{domainsJson}}"
+  },
+  transformData: function(data) {
+    data.domainsJson = JSON.stringify(data.customDomains || []);
+    return data;
   },
   fields: [
     {
@@ -372,13 +600,31 @@ const advancedTemplate = {
       label: 'Track Additional Domains',
       size: 'full',
       description: 'Add domains to track cross-domain activity',
+      useTooltip: false,
+      help_link: {
+        url: 'https://docs.example.com/cross-domain',
+        text: 'Learn about cross-domain tracking'
+      },
       input_config: {
         type: 'text',
         placeholder: 'example.com',
         button_text: 'Add Domain',
+        input_size: 'large',
+        button_size: 'small',
+        button_disabled: function(inputValue) {
+          return !inputValue || inputValue.trim() === '';
+        },
         validation: {
           pattern: /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i,
           message: 'Invalid domain format'
+        },
+        events: {
+          click: function(value, field, formData, component) {
+            console.log('Adding domain:', value);
+          },
+          remove: function(value, index, field, formData, component) {
+            console.log('Removing domain:', value);
+          }
         }
       }
     },
@@ -397,9 +643,19 @@ const advancedTemplate = {
         environment: '{{environment}}',
         endpoint: '{{customEndpoint}}' || 'https://api.tracking.com',
         features: {{enabledFeatures}},
-        domains: {{customDomains}},
         debug: {{debugMode}}
       };
+      
+      // Read domains from data attribute
+      var scripts = document.querySelectorAll('script[data-domains]');
+      var currentScript = scripts[scripts.length - 1];
+      if (currentScript) {
+        try {
+          config.domains = JSON.parse(currentScript.getAttribute('data-domains'));
+        } catch(e) {
+          config.domains = [];
+        }
+      }
       
       // Initialize tracking
       window.Tracker = window.Tracker || [];
@@ -422,49 +678,54 @@ const advancedTemplate = {
 };
 ```
 
-## Integration with Fynd Platform
+## Integration with Form Renderer
 
-When integrating these templates with the Fynd Platform:
+When integrating these templates with the form renderer:
 
 1. Templates are rendered in the tag management interface
 2. Field values are collected through the generated form
-3. The `script` template is processed, replacing `{{placeholders}}` with actual values
-4. The final script is injected into the storefront
+3. `transformData` is called to prepare data for injection
+4. The `script` template is processed, replacing `{{placeholders}}` with actual values
+5. `attributes` are applied to the script tag
+6. The final script is injected into the storefront
 
-### Example Implementation
-```javascript
-// Get template
-const template = templates.gtm;
+### Field Rendering Priority
+1. Check `condition` or `visible` function - skip if returns false
+2. Apply field `size` for layout
+3. Render label with required indicator if `required: true`
+4. Show `description` as tooltip or text based on `useTooltip`
+5. Apply validation on input/blur
+6. Execute event handlers
 
-// User fills form with values
-const formData = {
-  gtmId: 'GTM-ABC123'
-};
-
-// Process script template
-const finalScript = template.script.replace('{{gtmId}}', formData.gtmId);
-
-// Result is injected into page
-```
+### Array Field Rendering
+1. Render existing items as chips/tags
+2. Show input field with placeholder
+3. Show add button (respect `button_disabled` state)
+4. Apply `input_config.validation` before adding
+5. Execute `events.click` before adding item
+6. Execute `events.remove` before removing item
 
 ## Best Practices
 
 1. **Validation**: Always include proper validation for critical fields
 2. **Defaults**: Provide sensible defaults where applicable
 3. **Help Text**: Use `description` and `note` fields to guide users
-4. **Responsive Layout**: Use the layout configuration for better UX
+4. **Responsive Layout**: Use `layout.responsive: true` for better mobile UX
 5. **Error Messages**: Provide clear, actionable error messages
 6. **Event Handlers**: Use events for auto-formatting and enhanced UX
 7. **Conditional Fields**: Hide irrelevant fields to reduce complexity
+8. **Data Attributes**: Use `attributes` with `transformData` for complex data injection
+9. **Button States**: Use `button_disabled` to prevent invalid submissions
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Validation Errors**: Check regex patterns and error messages
+1. **Validation Errors**: Check regex patterns - use RegExp objects or properly escaped strings
 2. **Script Placeholders**: Ensure all `{{placeholders}}` match field names
-3. **Field Dependencies**: Use `condition` functions for dependent fields
+3. **Field Dependencies**: Use `condition` or `visible` functions for dependent fields
 4. **Array Fields**: Configure `input_config` properly for array inputs
+5. **Data Injection**: Use `transformData` and `attributes` for complex data types
 
 ### Debug Mode
 
@@ -485,4 +746,4 @@ script: `
 For more examples and support:
 - [GitHub Repository](https://github.com/gofynd/fynd-storefront-tag-template)
 - [Fynd Platform Docs](https://platform.fynd.com/docs)
-- [Issue Tracker](https://github.com/gofynd/fynd-storefront-tag-template/issues) 
+- [Issue Tracker](https://github.com/gofynd/fynd-storefront-tag-template/issues)

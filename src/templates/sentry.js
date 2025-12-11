@@ -20,7 +20,19 @@ const sentryTemplate = {
   sub_type: 'inline',
   position: 'head',
   pages: [],
-  attributes: { async: "true" },
+  attributes: { 
+    async: "true",
+    "data-excluded-urls": "{{excludedUrlsJson}}"
+  },
+  // Transform excludedUrls array to JSON string for data attribute
+  transformData: function(data) {
+    if (data.excludedUrls && Array.isArray(data.excludedUrls)) {
+      data.excludedUrlsJson = JSON.stringify(data.excludedUrls);
+    } else {
+      data.excludedUrlsJson = '[]';
+    }
+    return data;
+  },
   compatible_engines: ['react', 'vue2'],
   field_mappings: {
     dsn: 'sentry_dsn',
@@ -66,8 +78,12 @@ const sentryTemplate = {
         button_text: 'Add URL Pattern',
         input_size: 'large',  // Size for the input within array field
         button_size: 'small', // Size for the button within array field
+        // Disable button until input has a value
+        button_disabled: function(inputValue) {
+          return !inputValue || inputValue.trim() === '';
+        },
         validation: {
-          pattern: "/^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i",
+          pattern: /^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i,
           message: 'Enter a valid URL pattern (wildcards * are supported)'
         },
         events: {
@@ -94,16 +110,34 @@ const sentryTemplate = {
       'https://store-cdn1.fynd.com/*'
     ];
     
-    // Get user-provided excluded URLs from template injection
-    var userExcludedUrls = [{{#each excludedUrls}}'{{this}}'{{#unless @last}},{{/unless}}{{/each}}];
+    // Get user-provided excluded URLs from DOM data attribute
+    var userExcludedUrls = [];
+    try {
+      // Find the current script element by looking for our Sentry script
+      var scripts = document.querySelectorAll('script[data-excluded-urls]');
+      var currentScript = scripts[scripts.length - 1]; // Get the last one (most recent)
+      
+      if (currentScript && currentScript.getAttribute('data-excluded-urls')) {
+        var urlsData = currentScript.getAttribute('data-excluded-urls');
+        if (urlsData && urlsData !== '{{excludedUrlsJson}}' && urlsData !== '[]') {
+          userExcludedUrls = JSON.parse(urlsData);
+        }
+      }
+    } catch (e) {
+      console.warn('[Sentry] Failed to parse excluded URLs from data attribute:', e);
+    }
     
     // Merge defaults with user-provided URLs (avoid duplicates)
     var excludedUrlsArray = defaultExcludedUrls.slice();
-    userExcludedUrls.forEach(function(url) {
-      if (url && excludedUrlsArray.indexOf(url) === -1) {
-        excludedUrlsArray.push(url);
-      }
-    });
+    if (Array.isArray(userExcludedUrls)) {
+      userExcludedUrls.forEach(function(url) {
+        if (url && excludedUrlsArray.indexOf(url) === -1) {
+          excludedUrlsArray.push(url);
+        }
+      });
+    }
+    
+    console.log('[Sentry] Excluded URLs:', excludedUrlsArray);
     
     var specialChars = ['.', '+', '?', '^', '$', '(', ')', '|', '[', ']', '\\\\'];
     var denyUrlsRegex = excludedUrlsArray
