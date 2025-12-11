@@ -24,20 +24,7 @@ const sentryTemplate = {
   compatible_engines: ['react', 'vue2'],
   field_mappings: {
     dsn: 'sentry_dsn',
-    excludedUrls: 'excluded_urls',
-    excludedUrlsJson: 'excluded_urls_json'
-  },
-  // Transform excludedUrls array to JSON string for safe injection
-  transformData: function(data) {
-    if (data.excludedUrls && Array.isArray(data.excludedUrls)) {
-      data.excludedUrlsJson = JSON.stringify(data.excludedUrls);
-    } else {
-      data.excludedUrlsJson = JSON.stringify([
-        'chrome-extension://*',
-        'moz-extension://*'
-      ]);
-    }
-    return data;
+    excludedUrls: 'excluded_urls'
   },
   layout: {
     columns: 2,
@@ -53,7 +40,7 @@ const sentryTemplate = {
       size: 'full',
       description: 'Find in Settings → Projects → Client Keys (DSN). Format: https://<key>@<host>/<project_id>',
       validation: {
-        pattern: /^https:\/\/[a-f0-9]+@[a-z0-9.-]+\.[a-z]{2,}\/[0-9]+$/i,
+        pattern: "/^https:\/\/[a-f0-9]+@[a-z0-9.-]+\.[a-z]{2,}\/[0-9]+$/i",
         message: 'Must be a valid Sentry DSN',
       },
     },
@@ -80,7 +67,7 @@ const sentryTemplate = {
         input_size: 'large',  // Size for the input within array field
         button_size: 'small', // Size for the button within array field
         validation: {
-          pattern: /^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i,
+          pattern: "/^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i",
           message: 'Enter a valid URL pattern (wildcards * are supported)'
         },
         events: {
@@ -100,26 +87,23 @@ const sentryTemplate = {
     },
   ],
   script: `(function() {
-    // Process excluded URLs - inject as JSON string and parse
-    var excludedUrlsJson = '{{excludedUrlsJson}}';
-    var excludedUrlsArray = [];
+    // Default excluded URLs (always included)
+    var defaultExcludedUrls = [
+      'chrome-extension://*',
+      'moz-extension://*',
+      'https://store-cdn1.fynd.com/*'
+    ];
     
-    try {
-      if (excludedUrlsJson && excludedUrlsJson !== '' && excludedUrlsJson !== '{{excludedUrlsJson}}') {
-        excludedUrlsArray = JSON.parse(excludedUrlsJson);
+    // Get user-provided excluded URLs from template injection
+    var userExcludedUrls = [{{#each excludedUrls}}'{{this}}'{{#unless @last}},{{/unless}}{{/each}}];
+    
+    // Merge defaults with user-provided URLs (avoid duplicates)
+    var excludedUrlsArray = defaultExcludedUrls.slice();
+    userExcludedUrls.forEach(function(url) {
+      if (url && excludedUrlsArray.indexOf(url) === -1) {
+        excludedUrlsArray.push(url);
       }
-    } catch (e) {
-      console.warn('[Sentry] Failed to parse excluded URLs:', e);
-    }
-    
-    // Default excluded URLs if none provided
-    if (!excludedUrlsArray || excludedUrlsArray.length === 0) {
-      excludedUrlsArray = [
-        'chrome-extension://*',
-        'moz-extension://*',
-        'https://store-cdn1.fynd.com/*'
-      ];
-    }
+    });
     
     var specialChars = ['.', '+', '?', '^', '$', '(', ')', '|', '[', ']', '\\\\'];
     var denyUrlsRegex = excludedUrlsArray
