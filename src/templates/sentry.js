@@ -111,22 +111,63 @@ const sentryTemplate = {
 
   console.log("[Sentry] Excluded URLs:", excludedUrlsArray);
 
-  // Build regex list from patterns
-  var denyUrlsRegex = excludedUrlsArray.map(function(pattern) {
+  // Convert wildcard pattern to regex
+  function patternToRegex(pattern) {
     if (!pattern) return null;
+    // Escape all regex special characters except *
+    var specialChars = [".", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]"];
+    var escaped = "";
+    for (var i = 0; i < pattern.length; i++) {
+      var c = pattern[i];
+      if (c === "*") {
+        escaped += ".*";
+      } else if (specialChars.indexOf(c) !== -1) {
+        escaped += String.fromCharCode(92) + c;
+      } else {
+        escaped += c;
+      }
+    }
+    try {
+      return new RegExp("^" + escaped + "$", "i");
+    } catch (e) {
+      console.warn("[Sentry] Invalid pattern:", pattern);
+      return null;
+    }
+  }
 
-    // Escape regex special chars except *
-    var escaped = pattern.replace(/[-[\\]/{}()+?.\\\\^$|]/g, "\\\\$&");
+  // Build regex list from patterns
+  var denyUrlsRegex = excludedUrlsArray.map(patternToRegex).filter(Boolean);
 
-    // Convert wildcard * → match-anything regex
-    var wildcard = escaped.replace(/\\*/g, ".*");
+  // Check if URL matches any excluded pattern
+  function isUrlExcluded(url) {
+    if (!url) return false;
+    for (var i = 0; i < denyUrlsRegex.length; i++) {
+      if (denyUrlsRegex[i].test(url)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
-    return new RegExp(wildcard);
-  }).filter(Boolean);
+  // Check if current page should be excluded
+  function isCurrentPageExcluded() {
+    var currentUrl = window.location.href;
+    var isExcluded = isUrlExcluded(currentUrl);
+    if (isExcluded) {
+      console.log("[Sentry] Current page is excluded:", currentUrl);
+    }
+    return isExcluded;
+  }
 
   function initSentry() {
     if (!window.Sentry) {
       console.error("[Sentry] Sentry SDK not loaded");
+      return;
+    }
+
+    // Skip initialization if current page is excluded
+    if (isCurrentPageExcluded()) {
+      console.log("[Sentry] Skipping initialization - page is excluded");
       return;
     }
 
@@ -151,13 +192,19 @@ const sentryTemplate = {
       integrations: integrations,
 
       tracesSampleRate: 1.0,
-      tracePropagationTargets: ["localhost", /^\\/$/, window.location.origin],
+      tracePropagationTargets: ["localhost", window.location.origin],
       replaysSessionSampleRate: 0.1,
       replaysOnErrorSampleRate: 1.0,
 
       denyUrls: denyUrlsRegex,
 
       beforeSend: function(event) {
+        // Check current page URL first
+        if (isUrlExcluded(window.location.href)) {
+          console.log("[Sentry] Blocked - current page excluded:", window.location.href);
+          return null;
+        }
+
         // Filter exception stack frames
         if (event.exception && event.exception.values) {
           for (var i = 0; i < event.exception.values.length; i++) {
@@ -165,13 +212,9 @@ const sentryTemplate = {
             if (ex.stacktrace && ex.stacktrace.frames) {
               for (var j = 0; j < ex.stacktrace.frames.length; j++) {
                 var frame = ex.stacktrace.frames[j];
-                if (frame.filename) {
-                  for (var k = 0; k < denyUrlsRegex.length; k++) {
-                    if (denyUrlsRegex[k].test(frame.filename)) {
-                      console.log("[Sentry] Filtered excluded frame:", frame.filename);
-                      return null;
-                    }
-                  }
+                if (frame.filename && isUrlExcluded(frame.filename)) {
+                  console.log("[Sentry] Blocked - excluded frame:", frame.filename);
+                  return null;
                 }
               }
             }
@@ -179,13 +222,9 @@ const sentryTemplate = {
         }
 
         // Filter based on request URL
-        if (event.request && event.request.url) {
-          for (var m = 0; m < denyUrlsRegex.length; m++) {
-            if (denyUrlsRegex[m].test(event.request.url)) {
-              console.log("[Sentry] Filtered excluded request:", event.request.url);
-              return null;
-            }
-          }
+        if (event.request && event.request.url && isUrlExcluded(event.request.url)) {
+          console.log("[Sentry] Blocked - excluded request:", event.request.url);
+          return null;
         }
 
         return event;
