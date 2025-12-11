@@ -102,173 +102,132 @@ const sentryTemplate = {
       }
     },
   ],
-  script: `(function() {
-    // Default excluded URLs (always included)
-    var defaultExcludedUrls = [
-      'chrome-extension://*',
-      'moz-extension://*',
-      'https://store-cdn1.fynd.com/*'
-    ];
-    
-    // Get user-provided excluded URLs from DOM data attribute
-    var userExcludedUrls = [];
-    try {
-      // Find the current script element by looking for our Sentry script
-      var scripts = document.querySelectorAll('script[data-excluded-urls]');
-      var currentScript = scripts[scripts.length - 1]; // Get the last one (most recent)
-      
-      if (currentScript && currentScript.getAttribute('data-excluded-urls')) {
-        var urlsData = currentScript.getAttribute('data-excluded-urls');
-        if (urlsData && urlsData !== '{{excludedUrlsJson}}' && urlsData !== '[]') {
-          userExcludedUrls = JSON.parse(urlsData);
-        }
-      }
-    } catch (e) {
-      console.warn('[Sentry] Failed to parse excluded URLs from data attribute:', e);
-    }
-    
-    // Merge defaults with user-provided URLs (avoid duplicates)
-    var excludedUrlsArray = defaultExcludedUrls.slice();
-    if (Array.isArray(userExcludedUrls)) {
-      userExcludedUrls.forEach(function(url) {
-        if (url && excludedUrlsArray.indexOf(url) === -1) {
-          excludedUrlsArray.push(url);
-        }
-      });
-    }
-    
-    console.log('[Sentry] Excluded URLs:', excludedUrlsArray);
-    
-    var specialChars = ['.', '+', '?', '^', '$', '(', ')', '|', '[', ']', '\\\\'];
-    var denyUrlsRegex = excludedUrlsArray
-      .filter(function(url) { return url && url.trim() !== ''; })
-      .map(function(url) {
-        // Escape special regex characters except * which we'll use as wildcard
-        var escaped = url;
-        specialChars.forEach(function(char) {
-          escaped = escaped.split(char).join('\\\\' + char);
-        });
-        // Convert * to .* for wildcard matching
-        var pattern = escaped.replace(/\\*/g, '.*');
-        return new RegExp(pattern);
-      });
+  script: `(function () {
+  // Default excluded URLs
+  const defaultExcludedUrls = [
+    "chrome-extension://*",
+    "moz-extension://*",
+    "https://store-cdn1.fynd.com/*"
+  ];
 
-    function initSentry() {
-      if (typeof window.Sentry === 'undefined') {
-        console.error('[Sentry] Sentry SDK not loaded');
-        return;
-      }
+  // Get the current running script reliably
+  const currentScript = document.currentScript;
 
-      // Sentry v8 uses function-based integrations (not constructors)
-      var integrations = [];
-      
-      // Add browser tracing if available
-      if (typeof window.Sentry.browserTracingIntegration === 'function') {
-        integrations.push(window.Sentry.browserTracingIntegration());
-      }
-      
-      // Add replay if available
-      if (typeof window.Sentry.replayIntegration === 'function') {
-        integrations.push(window.Sentry.replayIntegration({
+  let userExcludedUrls = [];
+  try {
+    const attr = currentScript?.getAttribute("data-excluded-urls");
+
+    // Ensure placeholder is replaced by actual JSON
+    if (attr && attr !== "{{excludedUrlsJson}}") {
+      userExcludedUrls = JSON.parse(attr);
+    }
+  } catch (err) {
+    console.warn("[Sentry] Invalid excluded URL attribute", err);
+  }
+
+  // Merge unique values
+  const excludedUrlsArray = [...new Set([...defaultExcludedUrls, ...userExcludedUrls])];
+
+  console.log("[Sentry] Excluded URLs:", excludedUrlsArray);
+
+  // Build regex list from patterns
+  const denyUrlsRegex = excludedUrlsArray.map((pattern) => {
+    if (!pattern) return null;
+
+    // Escape regex special chars except *
+    const escaped = pattern.replace(/[-[\]/{}()+?.\\^$|]/g, "\\$&");
+
+    // Convert wildcard * → match-anything regex
+    const wildcard = escaped.replace(/\*/g, ".*");
+
+    return new RegExp(wildcard);
+  }).filter(Boolean);
+
+  function initSentry() {
+    if (!window.Sentry) {
+      console.error("[Sentry] Sentry SDK not loaded");
+      return;
+    }
+
+    const integrations = [];
+
+    if (typeof window.Sentry.browserTracingIntegration === "function") {
+      integrations.push(window.Sentry.browserTracingIntegration());
+    }
+
+    if (typeof window.Sentry.replayIntegration === "function") {
+      integrations.push(
+        window.Sentry.replayIntegration({
           maskAllText: true,
           blockAllMedia: true,
-        }));
-      }
+        })
+      );
+    }
 
-      window.Sentry.init({
-        dsn: '{{dsn}}',
-        sendDefaultPii: true,
-        integrations: integrations,
-        
-        // Performance Monitoring
-        tracesSampleRate: 1.0,
-        
-        // Trace propagation targets (v8 syntax - moved to root level)
-        tracePropagationTargets: ['localhost', /^\\//, window.location.origin],
-        
-        // Session Replay
-        replaysSessionSampleRate: 0.1,
-        replaysOnErrorSampleRate: 1.0,
-        
-        // Filter out errors from excluded URLs
-        denyUrls: denyUrlsRegex,
-        
-        // Additional filtering via beforeSend
-        beforeSend: function(event, hint) {
-          // Check if error originated from excluded URLs
-          if (event.exception && event.exception.values) {
-            for (var i = 0; i < event.exception.values.length; i++) {
-              var exception = event.exception.values[i];
-              if (exception.stacktrace && exception.stacktrace.frames) {
-                for (var j = 0; j < exception.stacktrace.frames.length; j++) {
-                  var frame = exception.stacktrace.frames[j];
-                  if (frame.filename) {
-                    // Check against excluded URLs
-                    for (var k = 0; k < denyUrlsRegex.length; k++) {
-                      if (denyUrlsRegex[k].test(frame.filename)) {
-                        console.log('[Sentry] Filtered error from excluded URL:', frame.filename);
-                        return null; // Drop the event
-                      }
-                    }
+    window.Sentry.init({
+      dsn: "{{dsn}}",
+      sendDefaultPii: true,
+      integrations,
+
+      tracesSampleRate: 1.0,
+      tracePropagationTargets: ["localhost", /^\/$/, window.location.origin],
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
+
+      denyUrls: denyUrlsRegex,
+
+      beforeSend(event) {
+        // Filter exception stack frames
+        if (event.exception?.values) {
+          for (const ex of event.exception.values) {
+            if (ex.stacktrace?.frames) {
+              for (const frame of ex.stacktrace.frames) {
+                if (frame.filename) {
+                  if (denyUrlsRegex.some((rgx) => rgx.test(frame.filename))) {
+                    console.log("[Sentry] Filtered excluded frame:", frame.filename);
+                    return null;
                   }
                 }
               }
             }
           }
-          
-          // Check request URL
-          if (event.request && event.request.url) {
-            for (var m = 0; m < denyUrlsRegex.length; m++) {
-              if (denyUrlsRegex[m].test(event.request.url)) {
-                console.log('[Sentry] Filtered error from excluded request URL:', event.request.url);
-                return null; // Drop the event
-              }
-            }
+        }
+
+        // Filter based on request URL
+        if (event.request?.url) {
+          if (denyUrlsRegex.some((rgx) => rgx.test(event.request.url))) {
+            console.log("[Sentry] Filtered excluded request:", event.request.url);
+            return null;
           }
-          
-          return event;
-        },
-        
-        // Ignore specific error messages
-        ignoreErrors: [
-          // Browser extensions
-          'top.GLOBALS',
-          'chrome-extension://',
-          'moz-extension://',
-          // Network errors
-          'NetworkError',
-          'Failed to fetch',
-          'Network request failed',
-          // Random plugins/extensions
-          'atomicFindClose',
-          'conduitPage',
-        ],
-      });
+        }
 
-      console.log('[Sentry] Initialized with DSN:', '{{dsn}}');
-      if (denyUrlsRegex.length > 0) {
-        console.log('[Sentry] Excluding', denyUrlsRegex.length, 'URL patterns');
-      }
-    }
+        return event;
+      },
 
-    // Load Sentry SDK
-    var script = document.createElement('script');
-    script.src = 'https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js';
-    script.crossOrigin = 'anonymous';
-    
-    script.onload = function() {
-      // Give a small delay to ensure Sentry global is available
-      setTimeout(function() {
-        initSentry();
-      }, 10);
-    };
-    
-    script.onerror = function() {
-      console.error('[Sentry] Failed to load Sentry SDK');
-    };
-    
-    document.head.appendChild(script);
-  })();`
+      ignoreErrors: [
+        "top.GLOBALS",
+        "chrome-extension://",
+        "moz-extension://",
+        "NetworkError",
+        "Failed to fetch",
+        "atomicFindClose",
+        "conduitPage",
+      ],
+    });
+
+    console.log("[Sentry] Initialized OK");
+  }
+
+  // Load Sentry CDN
+  const script = document.createElement("script");
+  script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js";
+  script.crossOrigin = "anonymous";
+
+  script.onload = () => setTimeout(initSentry, 10);
+  script.onerror = () => console.error("[Sentry] SDK load failed");
+
+  document.head.appendChild(script);
+})();`
 };
 
 module.exports = sentryTemplate; 
