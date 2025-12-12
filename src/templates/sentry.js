@@ -104,6 +104,7 @@ const sentryTemplate = {
   var allUrls = Array.from(new Set(defaultExcludedUrls.concat(userExcludedUrls)));
   console.log("[Sentry] Exclusion patterns:", allUrls);
 
+  // ---------------- REGEX HELPERS ----------------
   function escapeRegex(str) {
     return str.replace(/[-\/\\^$+?.()|[\]{}]/g, "\\$&");
   }
@@ -114,7 +115,7 @@ const sentryTemplate = {
     try {
       return new RegExp("^" + escaped + "$", "i");
     } catch (err) {
-      console.warn("[Sentry] Invalid regex pattern:", pattern);
+      console.warn("[Sentry] Invalid regex:", pattern);
       return null;
     }
   }
@@ -123,7 +124,7 @@ const sentryTemplate = {
 
   function isUrlExcluded(url) {
     if (!url) return false;
-    return denyUrlsRegex.some(function (regex) { return regex.test(url); });
+    return denyUrlsRegex.some(r => r.test(url));
   }
 
   function isCurrentPageExcluded() {
@@ -133,25 +134,42 @@ const sentryTemplate = {
     return excluded;
   }
 
-  function disableSentryDynamically() {
-    var hub = window.Sentry.getCurrentHub();
-    var client = hub.getClient();
-    if (!client) return;
-    console.log("[Sentry] Disabled dynamically (SPA navigation)");
-    var opts = client.getOptions();
-    opts.sampleRate = 0;
-    opts.tracesSampleRate = 0;
-    opts.replaysSessionSampleRate = 0;
-    opts.replaysOnErrorSampleRate = 0;
+  // ---------------- HARD DISABLE SENTRY ----------------
+  function hardDisableSentry() {
+    try {
+      var hub = window.Sentry?.getCurrentHub();
+      var client = hub?.getClient();
+
+      if (!client) return;
+
+      console.log("[Sentry] HARD DISABLE triggered");
+
+      // Stop transports / replay / tracing
+      client.close(); // ⬅️ THIS IS THE CRUCIAL FIX
+
+      // Remove all integrations to stop future events
+      client.getOptions().integrations = [];
+
+      // Rewrite beforeSend to block any event
+      client.getOptions().beforeSend = function () {
+        console.log("[Sentry] Event dropped — Sentry disabled");
+        return null;
+      };
+    } catch (err) {
+      console.warn("[Sentry] Hard disable error:", err);
+    }
   }
 
+  // ---------------- SPA ROUTE GUARD ----------------
   function enableSPARouteGuard() {
     let lastUrl = location.href;
+
     setInterval(() => {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
+
         if (isUrlExcluded(location.href)) {
-          disableSentryDynamically();
+          hardDisableSentry();
         } else {
           console.log("[Sentry] Page allowed after SPA navigation:", location.href);
         }
@@ -159,14 +177,21 @@ const sentryTemplate = {
     }, 300);
   }
 
+  // ---------------- INITIALIZE SENTRY ----------------
   function initSentry() {
     if (!window.Sentry) {
       console.error("[Sentry] SDK not loaded");
       return;
     }
 
+    // Prevent multiple inits with HMR
+    if (window.__SENTRY_INITIALIZED__) {
+      console.log("[Sentry] Already initialized");
+      return;
+    }
+
     if (isCurrentPageExcluded()) {
-      console.log("[Sentry] Skipping initialization (excluded page)");
+      console.log("[Sentry] Skipping init — excluded page");
       return;
     }
 
@@ -174,51 +199,33 @@ const sentryTemplate = {
 
     var integrations = [];
 
-    if (typeof window.Sentry.browserTracingIntegration === "function") {
+    if (window.Sentry.browserTracingIntegration)
       integrations.push(window.Sentry.browserTracingIntegration());
-    }
 
-    if (typeof window.Sentry.replayIntegration === "function") {
+    if (window.Sentry.replayIntegration)
       integrations.push(window.Sentry.replayIntegration({
         maskAllText: true,
-        blockAllMedia: true,
+        blockAllMedia: true
       }));
-    }
 
     window.Sentry.init({
       dsn: "{{dsn}}",
       sendDefaultPii: true,
-      integrations: integrations,
+      integrations,
       tracesSampleRate: 1.0,
       tracePropagationTargets: ["localhost", window.location.origin],
+
+      // Replays (can cause repeated envelopes)
       replaysSessionSampleRate: 0.1,
       replaysOnErrorSampleRate: 1.0,
+
       denyUrls: denyUrlsRegex,
 
-      beforeSend: function (event) {
-        if (!window.Sentry.getCurrentHub().getClient()) {
-          console.log("[Sentry] captureException skipped – Sentry not initialized");
-          return null;
-        }
-
+      beforeSend(event) {
         if (isUrlExcluded(window.location.href)) {
-          console.log("[Sentry] Event blocked (excluded URL):", window.location.href);
+          console.log("[Sentry] Dropped event — excluded URL");
           return null;
         }
-
-        if (event.exception?.values) {
-          for (var ex of event.exception.values) {
-            if (ex.stacktrace?.frames) {
-              for (var frame of ex.stacktrace.frames) {
-                if (frame.filename && isUrlExcluded(frame.filename)) {
-                  console.log("[Sentry] Event blocked (excluded frame):", frame.filename);
-                  return null;
-                }
-              }
-            }
-          }
-        }
-
         return event;
       },
 
@@ -233,25 +240,22 @@ const sentryTemplate = {
       ],
     });
 
-    console.log("[Sentry] Initialized successfully");
+    window.__SENTRY_INITIALIZED__ = true;
+
+    console.log("[Sentry] Initialized OK");
 
     enableSPARouteGuard();
-
-    console.log(
-      "[Sentry] Client initialized?",
-      !!window.Sentry.getCurrentHub().getClient()
-    );
   }
 
+  // ---------------- LOAD SDK ----------------
   var script = document.createElement("script");
   script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js";
   script.crossOrigin = "anonymous";
 
-  script.onload = function () { setTimeout(initSentry, 10); };
-  script.onerror = function () { console.error("[Sentry] SDK load failed"); };
+  script.onload = () => setTimeout(initSentry, 10);
+  script.onerror = () => console.error("[Sentry] SDK load failed");
 
   document.head.appendChild(script);
-
 })();`
 };
 
