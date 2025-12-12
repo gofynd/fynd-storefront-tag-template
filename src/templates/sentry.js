@@ -196,6 +196,11 @@ const sentryTemplate = {
       denyUrls: denyUrlsRegex,
 
       beforeSend: function (event) {
+        if (!window.Sentry.getCurrentHub().getClient()) {
+          console.log("[Sentry] captureException skipped – Sentry not initialized");
+          return null;
+        }
+
         if (isUrlExcluded(window.location.href)) {
           console.log("[Sentry] Event blocked (excluded URL):", window.location.href);
           return null;
