@@ -93,83 +93,126 @@ const sentryTemplate = {
     },
   ],
   script: `(function () {
-  // User configured excluded URLs (injected from template)
-  var userExcludedUrls = [{{excludedUrls}}];
+  // -------------------------------
+  // User excluded URLs from template
+  // -------------------------------
+  var userExcludedUrls = [{{excludedUrls}}]; // e.g. ["https://abc.com/brands/*"]
 
+  // -------------------------------
   // Default excluded URLs
+  // -------------------------------
   var defaultExcludedUrls = [
     "chrome-extension://*",
     "moz-extension://*",
     "https://store-cdn1.fynd.com/*"
   ];
 
-  // Merge unique values
-  var allUrls = defaultExcludedUrls.concat(userExcludedUrls);
-  var excludedUrlsArray = allUrls.filter(function(item, index) {
-    return item && allUrls.indexOf(item) === index;
-  });
+  // Merge & remove duplicates
+  var allUrls = Array.from(new Set(defaultExcludedUrls.concat(userExcludedUrls)));
 
-  console.log("[Sentry] Excluded URLs:", excludedUrlsArray);
+  console.log("[Sentry] Excluded URL Patterns:", allUrls);
 
-  // Convert wildcard pattern to regex
+  // -------------------------------
+  // Convert wildcard patterns → RegExp
+  // -------------------------------
   function patternToRegex(pattern) {
     if (!pattern) return null;
-    // Escape all regex special characters except *
-    var specialChars = [".", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]"];
-    var escaped = "";
+
+    var special = [".", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]"];
+    var out = "";
+
     for (var i = 0; i < pattern.length; i++) {
       var c = pattern[i];
       if (c === "*") {
-        escaped += ".*";
-      } else if (specialChars.indexOf(c) !== -1) {
-        escaped += String.fromCharCode(92) + c;
+        out += ".*";
+      } else if (special.indexOf(c) !== -1) {
+        out += "\\" + c;
       } else {
-        escaped += c;
+        out += c;
       }
     }
+
     try {
-      return new RegExp("^" + escaped + "$", "i");
+      return new RegExp("^" + out + "$", "i");
     } catch (e) {
-      console.warn("[Sentry] Invalid pattern:", pattern);
+      console.warn("[Sentry] Invalid exclude pattern:", pattern);
       return null;
     }
   }
 
-  // Build regex list from patterns
-  var denyUrlsRegex = excludedUrlsArray.map(patternToRegex).filter(Boolean);
+  var denyUrlsRegex = allUrls.map(patternToRegex).filter(Boolean);
 
-  // Check if URL matches any excluded pattern
+  // -------------------------------
+  // URL exclusion checker
+  // -------------------------------
   function isUrlExcluded(url) {
     if (!url) return false;
-    for (var i = 0; i < denyUrlsRegex.length; i++) {
-      if (denyUrlsRegex[i].test(url)) {
-        return true;
-      }
-    }
-    return false;
+    return denyUrlsRegex.some(function (r) { return r.test(url); });
   }
 
-  // Check if current page should be excluded
   function isCurrentPageExcluded() {
     var currentUrl = window.location.href;
-    var isExcluded = isUrlExcluded(currentUrl);
-    if (isExcluded) {
+    var excluded = isUrlExcluded(currentUrl);
+
+    if (excluded) {
       console.log("[Sentry] Current page is excluded:", currentUrl);
     }
-    return isExcluded;
+
+    return excluded;
   }
 
+  // -------------------------------
+  // Disable Sentry AFTER navigation
+  // -------------------------------
+  function disableSentryDynamically() {
+    var hub = window.Sentry.getCurrentHub();
+    var client = hub.getClient();
+
+    if (!client) return;
+
+    console.log("[Sentry] Dynamically disabling Sentry (SPA navigation)");
+
+    var opts = client.getOptions();
+    opts.sampleRate = 0;
+    opts.tracesSampleRate = 0;
+    opts.replaysSessionSampleRate = 0;
+    opts.replaysOnErrorSampleRate = 0;
+  }
+
+  // -------------------------------
+  // Setup dynamic SPA blocking
+  // -------------------------------
+  function enableSPARouteGuard() {
+    let lastUrl = location.href;
+
+    setInterval(() => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+
+        if (isUrlExcluded(location.href)) {
+          disableSentryDynamically();
+        } else {
+          console.log("[Sentry] Allowed page after navigation:", location.href);
+        }
+      }
+    }, 300);
+  }
+
+  // -------------------------------
+  // Initialize Sentry
+  // -------------------------------
   function initSentry() {
     if (!window.Sentry) {
-      console.error("[Sentry] Sentry SDK not loaded");
+      console.error("[Sentry] SDK not loaded");
       return;
     }
 
-    // Skip initialization if current page is excluded
     if (isCurrentPageExcluded()) {
-      console.log("[Sentry] Skipping initialization - page is excluded");
+      console.log("[Sentry] Skipping initialization - initial page is excluded");
       return;
     }
+
+    console.log("[Sentry] Initializing Sentry...");
 
     var integrations = [];
 
@@ -178,12 +221,10 @@ const sentryTemplate = {
     }
 
     if (typeof window.Sentry.replayIntegration === "function") {
-      integrations.push(
-        window.Sentry.replayIntegration({
-          maskAllText: true,
-          blockAllMedia: true,
-        })
-      );
+      integrations.push(window.Sentry.replayIntegration({
+        maskAllText: true,
+        blockAllMedia: true,
+      }));
     }
 
     window.Sentry.init({
@@ -198,33 +239,29 @@ const sentryTemplate = {
 
       denyUrls: denyUrlsRegex,
 
-      beforeSend: function(event) {
-        // Check current page URL first
+      // ✔ SPA-safe dynamic blocking
+      beforeSend: function (event) {
+        if (!window.Sentry.getCurrentHub().getClient()) {
+          console.log("[Sentry] captureException skipped – Sentry not initialized");
+          return null;
+        }
         if (isUrlExcluded(window.location.href)) {
-          console.log("[Sentry] Blocked - current page excluded:", window.location.href);
+          console.log("[Sentry] Event blocked (excluded page):", window.location.href);
           return null;
         }
 
-        // Filter exception stack frames
-        if (event.exception && event.exception.values) {
-          for (var i = 0; i < event.exception.values.length; i++) {
-            var ex = event.exception.values[i];
-            if (ex.stacktrace && ex.stacktrace.frames) {
-              for (var j = 0; j < ex.stacktrace.frames.length; j++) {
-                var frame = ex.stacktrace.frames[j];
+        // Block frames
+        if (event.exception?.values) {
+          for (var ex of event.exception.values) {
+            if (ex.stacktrace?.frames) {
+              for (var frame of ex.stacktrace.frames) {
                 if (frame.filename && isUrlExcluded(frame.filename)) {
-                  console.log("[Sentry] Blocked - excluded frame:", frame.filename);
+                  console.log("[Sentry] Event blocked (excluded frame):", frame.filename);
                   return null;
                 }
               }
             }
           }
-        }
-
-        // Filter based on request URL
-        if (event.request && event.request.url && isUrlExcluded(event.request.url)) {
-          console.log("[Sentry] Blocked - excluded request:", event.request.url);
-          return null;
         }
 
         return event;
@@ -241,16 +278,31 @@ const sentryTemplate = {
       ],
     });
 
-    console.log("[Sentry] Initialized OK");
+    console.log("[Sentry] Initialized successfully");
+
+    // Enable route guard after init
+    enableSPARouteGuard();
+
+    // Debug check
+    console.log(
+      "[Sentry] Initialized client =",
+      !!window.Sentry.getCurrentHub().getClient()
+    );
   }
 
-  // Load Sentry CDN
+  // -------------------------------
+  // Load Sentry CDN → then init
+  // -------------------------------
   var script = document.createElement("script");
   script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js";
   script.crossOrigin = "anonymous";
 
-  script.onload = function() { setTimeout(initSentry, 10); };
-  script.onerror = function() { console.error("[Sentry] SDK load failed"); };
+  script.onload = function () {
+    setTimeout(initSentry, 10);
+  };
+  script.onerror = function () {
+    console.error("[Sentry] Failed to load SDK");
+  };
 
   document.head.appendChild(script);
 })();`
