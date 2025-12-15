@@ -41,9 +41,22 @@ const sentryTemplate = {
       required: true,
       size: 'full',
       description: 'Find in Settings → Projects → Client Keys (DSN). Format: https://<key>@<host>/<project_id>',
+      // Auto-trim leading/trailing whitespace
+      transform: function(value) {
+        return value ? value.trim() : value;
+      },
       validation: {
-        pattern: "/^https:\/\/[a-f0-9]+@[a-z0-9.-]+\.[a-z]{2,}\/[0-9]+$/i",
-        message: 'Must be a valid Sentry DSN',
+        // Comprehensive DSN validation regex:
+        // - https:// protocol required
+        // - [a-f0-9]+ : hex public key (1+ chars)
+        // - @ : separator
+        // - (?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+ : one or more domain labels with dots (ensures at least one dot)
+        //   - Each label: starts/ends with alphanumeric, can have hyphens in middle
+        // - [a-z]{2,} : TLD (letters only, 2+ chars)
+        // - (?::[0-9]{1,5})? : optional port (1-5 digits)
+        // - \/[0-9]+ : project ID (numeric)
+        pattern: "/^https:\\/\\/[a-f0-9]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}(?::[0-9]{1,5})?\\/[0-9]+$/i",
+        message: 'Invalid Sentry DSN. Expected format: https://<key>@<host>.<tld>/<project_id>. Ensure the domain has a valid TLD (e.g., .io, .com) and port is numeric if specified.',
       },
     },
     {
@@ -104,6 +117,13 @@ const sentryTemplate = {
   var allUrls = Array.from(new Set(defaultExcludedUrls.concat(userExcludedUrls)));
   console.log("[Sentry] Exclusion patterns:", allUrls);
 
+  // Track Sentry state
+  var sentryState = {
+    initialized: false,
+    enabled: false,
+    sdkLoaded: false
+  };
+
   // ---------------- REGEX HELPERS ----------------
   function escapeRegex(str) {
     return str.replace(/[-\/\\^$+?.()|[\]{}]/g, "\\$&");
@@ -124,7 +144,7 @@ const sentryTemplate = {
 
   function isUrlExcluded(url) {
     if (!url) return false;
-    return denyUrlsRegex.some(r => r.test(url));
+    return denyUrlsRegex.some(function(r) { return r.test(url); });
   }
 
   function isCurrentPageExcluded() {
@@ -134,47 +154,130 @@ const sentryTemplate = {
     return excluded;
   }
 
-  // ---------------- HARD DISABLE SENTRY ----------------
-  function hardDisableSentry() {
-    try {
-      var hub = window.Sentry?.getCurrentHub();
-      var client = hub?.getClient();
+  // ---------------- SOFT DISABLE SENTRY ----------------
+  function disableSentry() {
+    if (!sentryState.enabled) return;
 
+    try {
+      var client = window.Sentry?.getClient?.();
       if (!client) return;
 
-      console.log("[Sentry] HARD DISABLE triggered");
+      console.log("[Sentry] Disabling on excluded page");
 
-      // Stop transports / replay / tracing
-      client.close(); // ⬅️ THIS IS THE CRUCIAL FIX
+      // Use enabled option to soft-disable (doesn't close the client)
+      var options = client.getOptions();
+      options.enabled = false;
+      sentryState.enabled = false;
 
-      // Remove all integrations to stop future events
-      client.getOptions().integrations = [];
-
-      // Rewrite beforeSend to block any event
-      client.getOptions().beforeSend = function () {
-        console.log("[Sentry] Event dropped — Sentry disabled");
-        return null;
-      };
+      // Pause replay if active
+      var replay = window.Sentry?.getReplay?.();
+      if (replay && typeof replay.stop === 'function') {
+        replay.stop();
+        console.log("[Sentry] Replay stopped");
+      }
     } catch (err) {
-      console.warn("[Sentry] Hard disable error:", err);
+      console.warn("[Sentry] Disable error:", err);
+    }
+  }
+
+  // ---------------- RE-ENABLE SENTRY ----------------
+  function enableSentry() {
+    if (sentryState.enabled) return;
+
+    try {
+      var client = window.Sentry?.getClient?.();
+      if (!client) {
+        // If client doesn't exist and SDK is loaded, initialize
+        if (sentryState.sdkLoaded && !sentryState.initialized) {
+          initSentry();
+        }
+        return;
+      }
+
+      console.log("[Sentry] Re-enabling on allowed page");
+
+      // Re-enable the client
+      var options = client.getOptions();
+      options.enabled = true;
+      sentryState.enabled = true;
+
+      // Resume replay if available
+      var replay = window.Sentry?.getReplay?.();
+      if (replay && typeof replay.start === 'function') {
+        replay.start();
+        console.log("[Sentry] Replay resumed");
+      }
+    } catch (err) {
+      console.warn("[Sentry] Enable error:", err);
+    }
+  }
+
+  // ---------------- HANDLE ROUTE CHANGE ----------------
+  function handleRouteChange(url) {
+    console.log("[Sentry] Route changed:", url);
+
+    if (isUrlExcluded(url)) {
+      disableSentry();
+    } else {
+      // If Sentry was never initialized (started on excluded page), initialize now
+      if (!sentryState.initialized && sentryState.sdkLoaded) {
+        console.log("[Sentry] First allowed page - initializing");
+        initSentry();
+      } else {
+        enableSentry();
+      }
     }
   }
 
   // ---------------- SPA ROUTE GUARD ----------------
   function enableSPARouteGuard() {
-    let lastUrl = location.href;
+    var lastUrl = location.href;
 
-    setInterval(() => {
+    // 1. Listen to popstate for browser back/forward navigation
+    window.addEventListener('popstate', function(event) {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-
-        if (isUrlExcluded(location.href)) {
-          hardDisableSentry();
-        } else {
-          console.log("[Sentry] Page allowed after SPA navigation:", location.href);
-        }
+        handleRouteChange(location.href);
       }
-    }, 300);
+    });
+
+    // 2. Wrap history.pushState
+    var originalPushState = history.pushState;
+    history.pushState = function() {
+      originalPushState.apply(this, arguments);
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        handleRouteChange(location.href);
+      }
+    };
+
+    // 3. Wrap history.replaceState
+    var originalReplaceState = history.replaceState;
+    history.replaceState = function() {
+      originalReplaceState.apply(this, arguments);
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        handleRouteChange(location.href);
+      }
+    };
+
+    // 4. Listen to hashchange for hash-based routing
+    window.addEventListener('hashchange', function(event) {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        handleRouteChange(location.href);
+      }
+    });
+
+    // 5. Fallback polling for edge cases (some frameworks use custom routing)
+    setInterval(function() {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        handleRouteChange(location.href);
+      }
+    }, 500);
+
+    console.log("[Sentry] SPA route guard enabled");
   }
 
   // ---------------- INITIALIZE SENTRY ----------------
@@ -184,14 +287,20 @@ const sentryTemplate = {
       return;
     }
 
-    // Prevent multiple inits with HMR
-    if (window.__SENTRY_INITIALIZED__) {
+    // Prevent multiple inits
+    if (sentryState.initialized) {
       console.log("[Sentry] Already initialized");
+      // If already initialized but disabled, and current page is allowed, enable
+      if (!sentryState.enabled && !isCurrentPageExcluded()) {
+        enableSentry();
+      }
       return;
     }
 
+    // If on excluded page, skip init but enable route guard
     if (isCurrentPageExcluded()) {
-      console.log("[Sentry] Skipping init — excluded page");
+      console.log("[Sentry] Skipping init — excluded page (will init on allowed page)");
+      enableSPARouteGuard();
       return;
     }
 
@@ -211,22 +320,32 @@ const sentryTemplate = {
     window.Sentry.init({
       dsn: "{{dsn}}",
       sendDefaultPii: true,
-      integrations,
+      integrations: integrations,
       tracesSampleRate: 1.0,
       tracePropagationTargets: ["localhost", window.location.origin],
 
-      // Replays (can cause repeated envelopes)
+      // Replays
       replaysSessionSampleRate: 0.1,
       replaysOnErrorSampleRate: 1.0,
 
       denyUrls: denyUrlsRegex,
 
-      beforeSend(event) {
+      beforeSend: function(event) {
+        // Double-check exclusion at send time
         if (isUrlExcluded(window.location.href)) {
           console.log("[Sentry] Dropped event — excluded URL");
           return null;
         }
         return event;
+      },
+
+      beforeSendTransaction: function(transaction) {
+        // Also filter transactions/performance data
+        if (isUrlExcluded(window.location.href)) {
+          console.log("[Sentry] Dropped transaction — excluded URL");
+          return null;
+        }
+        return transaction;
       },
 
       ignoreErrors: [
@@ -240,7 +359,8 @@ const sentryTemplate = {
       ],
     });
 
-    window.__SENTRY_INITIALIZED__ = true;
+    sentryState.initialized = true;
+    sentryState.enabled = true;
 
     console.log("[Sentry] Initialized OK");
 
@@ -252,8 +372,13 @@ const sentryTemplate = {
   script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js";
   script.crossOrigin = "anonymous";
 
-  script.onload = () => setTimeout(initSentry, 10);
-  script.onerror = () => console.error("[Sentry] SDK load failed");
+  script.onload = function() {
+    sentryState.sdkLoaded = true;
+    setTimeout(initSentry, 10);
+  };
+  script.onerror = function() {
+    console.error("[Sentry] SDK load failed");
+  };
 
   document.head.appendChild(script);
 })();`
