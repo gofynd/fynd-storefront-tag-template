@@ -124,6 +124,63 @@ const sentryTemplate = {
     sdkLoaded: false
   };
 
+  // ---------------- ERROR DEDUPLICATION & RATE LIMITING ----------------
+  var errorCache = {};
+  var ERROR_THROTTLE_MS = 5000; // Minimum 5 seconds between identical errors
+  var MAX_ERRORS_PER_MINUTE = 5;
+  var errorCountThisMinute = 0;
+  var lastMinuteReset = Date.now();
+
+  function getErrorFingerprint(event) {
+    var message = event.message || '';
+    var type = event.exception?.values?.[0]?.type || '';
+    var value = event.exception?.values?.[0]?.value || '';
+    var stack = event.exception?.values?.[0]?.stacktrace?.frames?.[0]?.filename || '';
+    return type + ':' + value + ':' + message + ':' + stack;
+  }
+
+  function shouldThrottleError(event) {
+    var now = Date.now();
+
+    // Reset counter every minute
+    if (now - lastMinuteReset > 60000) {
+      errorCountThisMinute = 0;
+      lastMinuteReset = now;
+    }
+
+    // Check global rate limit
+    if (errorCountThisMinute >= MAX_ERRORS_PER_MINUTE) {
+      console.log("[Sentry] Rate limit reached (" + MAX_ERRORS_PER_MINUTE + "/min), dropping event");
+      return true;
+    }
+
+    // Check for duplicate errors (throttle identical errors)
+    var fingerprint = getErrorFingerprint(event);
+    var lastSent = errorCache[fingerprint];
+
+    if (lastSent && (now - lastSent) < ERROR_THROTTLE_MS) {
+      console.log("[Sentry] Duplicate error throttled (wait " + Math.ceil((ERROR_THROTTLE_MS - (now - lastSent)) / 1000) + "s)");
+      return true;
+    }
+
+    // Update tracking
+    errorCache[fingerprint] = now;
+    errorCountThisMinute++;
+
+    // Clean old cache entries (prevent memory leak)
+    var cacheKeys = Object.keys(errorCache);
+    if (cacheKeys.length > 50) {
+      var oldestAllowed = now - 60000;
+      cacheKeys.forEach(function(key) {
+        if (errorCache[key] < oldestAllowed) {
+          delete errorCache[key];
+        }
+      });
+    }
+
+    return false;
+  }
+
   // ---------------- REGEX HELPERS ----------------
   function escapeRegex(str) {
     return str.replace(/[-\/\\^$+?.()|[\]{}]/g, "\\$&");
@@ -168,13 +225,6 @@ const sentryTemplate = {
       var options = client.getOptions();
       options.enabled = false;
       sentryState.enabled = false;
-
-      // Pause replay if active
-      var replay = window.Sentry?.getReplay?.();
-      if (replay && typeof replay.stop === 'function') {
-        replay.stop();
-        console.log("[Sentry] Replay stopped");
-      }
     } catch (err) {
       console.warn("[Sentry] Disable error:", err);
     }
@@ -200,13 +250,6 @@ const sentryTemplate = {
       var options = client.getOptions();
       options.enabled = true;
       sentryState.enabled = true;
-
-      // Resume replay if available
-      var replay = window.Sentry?.getReplay?.();
-      if (replay && typeof replay.start === 'function') {
-        replay.start();
-        console.log("[Sentry] Replay resumed");
-      }
     } catch (err) {
       console.warn("[Sentry] Enable error:", err);
     }
@@ -308,39 +351,62 @@ const sentryTemplate = {
 
     var integrations = [];
 
-    if (window.Sentry.browserTracingIntegration)
+    // Add browser tracing for performance monitoring (no continuous calls)
+    if (window.Sentry.browserTracingIntegration) {
       integrations.push(window.Sentry.browserTracingIntegration());
+    }
 
-    if (window.Sentry.replayIntegration)
-      integrations.push(window.Sentry.replayIntegration({
-        maskAllText: true,
-        blockAllMedia: true
-      }));
+    // Add deduplication integration to prevent duplicate errors
+    if (window.Sentry.dedupeIntegration) {
+      integrations.push(window.Sentry.dedupeIntegration());
+    }
+
+    // NOTE: Session Replay is DISABLED to prevent continuous API calls
+    // Replay sends continuous DOM snapshots which causes /envelope/ spam
+    // Uncomment below if you need replay (will cause continuous calls):
+    // if (window.Sentry.replayIntegration) {
+    //   integrations.push(window.Sentry.replayIntegration({
+    //     maskAllText: true,
+    //     blockAllMedia: true
+    //   }));
+    // }
 
     window.Sentry.init({
       dsn: "{{dsn}}",
-      sendDefaultPii: true,
+      sendDefaultPii: false,
       integrations: integrations,
-      tracesSampleRate: 1.0,
+      
+      // Performance tracing sample rate (0.1 = 10% of page loads)
+      tracesSampleRate: 0.1,
       tracePropagationTargets: ["localhost", window.location.origin],
 
-      // Replays
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
+      // Session Replay DISABLED - set to 0 to prevent continuous calls
+      replaysSessionSampleRate: 0,
+      replaysOnErrorSampleRate: 0,
 
       denyUrls: denyUrlsRegex,
 
-      beforeSend: function(event) {
+      // Limit breadcrumbs to reduce payload size
+      maxBreadcrumbs: 30,
+
+      beforeSend: function(event, hint) {
         // Double-check exclusion at send time
         if (isUrlExcluded(window.location.href)) {
           console.log("[Sentry] Dropped event — excluded URL");
           return null;
         }
+
+        // Apply error throttling to prevent spam
+        if (shouldThrottleError(event)) {
+          return null;
+        }
+
+        console.log("[Sentry] Sending error event");
         return event;
       },
 
       beforeSendTransaction: function(transaction) {
-        // Also filter transactions/performance data
+        // Filter transactions on excluded pages
         if (isUrlExcluded(window.location.href)) {
           console.log("[Sentry] Dropped transaction — excluded URL");
           return null;
@@ -354,22 +420,27 @@ const sentryTemplate = {
         "moz-extension://",
         "NetworkError",
         "Failed to fetch",
+        "Load failed",
         "atomicFindClose",
         "conduitPage",
+        "ResizeObserver loop",
+        "Non-Error promise rejection",
+        "Script error."
       ],
     });
 
     sentryState.initialized = true;
     sentryState.enabled = true;
 
-    console.log("[Sentry] Initialized OK");
+    console.log("[Sentry] Initialized OK (Replay disabled, Rate limit: " + MAX_ERRORS_PER_MINUTE + "/min)");
 
     enableSPARouteGuard();
   }
 
   // ---------------- LOAD SDK ----------------
+  // Using bundle.tracing.min.js (without replay) to prevent continuous calls
   var script = document.createElement("script");
-  script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.tracing.replay.min.js";
+  script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.tracing.min.js";
   script.crossOrigin = "anonymous";
 
   script.onload = function() {
