@@ -56,7 +56,7 @@ const sentryTemplate = {
         // - (?::[0-9]{1,5})? : optional port (1-5 digits)
         // - \/[0-9]+ : project ID (numeric)
         pattern: "/^https:\\/\\/[a-f0-9]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}(?::[0-9]{1,5})?\\/[0-9]+$/i",
-        message: 'Invalid Sentry DSN. Expected format: https://<key>@<host>.<tld>/<project_id>. Ensure the domain has a valid TLD (e.g., .io, .com) and port is numeric if specified.',
+        message: 'Invalid Sentry DSN.',
       },
     },
     {
@@ -86,8 +86,10 @@ const sentryTemplate = {
           return !inputValue || inputValue.trim() === '';
         },
         validation: {
-          pattern: "/^(\*|https?:\/\/)?[a-z\d\-.*:\/_@]+$/i",
-          message: 'Enter a valid URL pattern (wildcards * are supported)'
+          // Pattern allows: URLs, wildcards (*), paths, extensions
+          // Examples: https://cdn.example.com/*, */analytics.js, chrome-extension://*
+          pattern: "/^[a-zA-Z0-9*_.\\-:\\/]+$/",
+          message: 'Enter a valid URL pattern. Allowed: letters, numbers, * (wildcard), . _ - : /'
         },
         events: {
           // Custom click handler - can be used for additional validation or logging
@@ -347,47 +349,37 @@ const sentryTemplate = {
       return;
     }
 
-    console.log("[Sentry] Initializing...");
+    console.log("[Sentry] Initializing in ERRORS-ONLY mode...");
 
+    // ERRORS-ONLY MODE: No tracing, no replay, no sessions
+    // Only sends data to /envelope when an actual error occurs
     var integrations = [];
-
-    // Add browser tracing for performance monitoring (no continuous calls)
-    if (window.Sentry.browserTracingIntegration) {
-      integrations.push(window.Sentry.browserTracingIntegration());
-    }
 
     // Add deduplication integration to prevent duplicate errors
     if (window.Sentry.dedupeIntegration) {
       integrations.push(window.Sentry.dedupeIntegration());
     }
 
-    // NOTE: Session Replay is DISABLED to prevent continuous API calls
-    // Replay sends continuous DOM snapshots which causes /envelope/ spam
-    // Uncomment below if you need replay (will cause continuous calls):
-    // if (window.Sentry.replayIntegration) {
-    //   integrations.push(window.Sentry.replayIntegration({
-    //     maskAllText: true,
-    //     blockAllMedia: true
-    //   }));
-    // }
-
     window.Sentry.init({
       dsn: "{{dsn}}",
       sendDefaultPii: false,
       integrations: integrations,
       
-      // Performance tracing sample rate (0.1 = 10% of page loads)
-      tracesSampleRate: 0.1,
-      tracePropagationTargets: ["localhost", window.location.origin],
+      // DISABLED: Performance tracing (causes continuous calls)
+      tracesSampleRate: 0,
+      enableTracing: false,
 
-      // Session Replay DISABLED - set to 0 to prevent continuous calls
+      // DISABLED: Session Replay (causes continuous calls)
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 0,
+
+      // DISABLED: Auto session tracking (causes calls on page load)
+      autoSessionTracking: false,
 
       denyUrls: denyUrlsRegex,
 
       // Limit breadcrumbs to reduce payload size
-      maxBreadcrumbs: 30,
+      maxBreadcrumbs: 20,
 
       beforeSend: function(event, hint) {
         // Double-check exclusion at send time
@@ -401,17 +393,14 @@ const sentryTemplate = {
           return null;
         }
 
-        console.log("[Sentry] Sending error event");
+        console.log("[Sentry] Sending error event to Sentry");
         return event;
       },
 
+      // Block ALL transactions (performance data)
       beforeSendTransaction: function(transaction) {
-        // Filter transactions on excluded pages
-        if (isUrlExcluded(window.location.href)) {
-          console.log("[Sentry] Dropped transaction — excluded URL");
-          return null;
-        }
-        return transaction;
+        console.log("[Sentry] Blocked transaction — errors-only mode");
+        return null;
       },
 
       ignoreErrors: [
@@ -438,9 +427,10 @@ const sentryTemplate = {
   }
 
   // ---------------- LOAD SDK ----------------
-  // Using bundle.tracing.min.js (without replay) to prevent continuous calls
+  // Using MINIMAL bundle (errors-only, no tracing, no replay)
+  // This bundle does NOT include performance tracing or session replay
   var script = document.createElement("script");
-  script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.tracing.min.js";
+  script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.min.js";
   script.crossOrigin = "anonymous";
 
   script.onload = function() {
