@@ -108,7 +108,20 @@ const sentryTemplate = {
     },
   ],
   script: `(function () {
-  var userExcludedUrls = [{{excludedUrls}}];
+  console.log("[Sentry] Script starting...");
+
+  // Parse user excluded URLs safely
+  var userExcludedUrls = [];
+  try {
+    var rawExcluded = [{{excludedUrls}}];
+    if (Array.isArray(rawExcluded)) {
+      userExcludedUrls = rawExcluded.filter(function(url) {
+        return typeof url === 'string' && url.trim() !== '';
+      });
+    }
+  } catch (e) {
+    console.warn("[Sentry] Failed to parse excludedUrls:", e);
+  }
 
   var defaultExcludedUrls = [
     "chrome-extension://*",
@@ -327,6 +340,8 @@ const sentryTemplate = {
 
   // ---------------- INITIALIZE SENTRY ----------------
   function initSentry() {
+    console.log("[Sentry] initSentry called...");
+
     if (!window.Sentry) {
       console.error("[Sentry] SDK not loaded");
       return;
@@ -349,7 +364,14 @@ const sentryTemplate = {
       return;
     }
 
-    console.log("[Sentry] Initializing in ERRORS-ONLY mode...");
+    // Validate DSN before initializing
+    var dsn = "{{dsn}}";
+    if (!dsn || dsn === "{{" + "dsn}}" || dsn.indexOf("https://") !== 0) {
+      console.error("[Sentry] Invalid or missing DSN:", dsn);
+      return;
+    }
+
+    console.log("[Sentry] Initializing in ERRORS-ONLY mode with DSN:", dsn.substring(0, 30) + "...");
 
     // ERRORS-ONLY MODE: No tracing, no replay, no sessions
     // Only sends data to /envelope when an actual error occurs
@@ -360,8 +382,9 @@ const sentryTemplate = {
       integrations.push(window.Sentry.dedupeIntegration());
     }
 
+    try {
     window.Sentry.init({
-      dsn: "{{dsn}}",
+      dsn: dsn,
       sendDefaultPii: false,
       integrations: integrations,
       
@@ -423,25 +446,59 @@ const sentryTemplate = {
 
     console.log("[Sentry] Initialized OK (Replay disabled, Rate limit: " + MAX_ERRORS_PER_MINUTE + "/min)");
 
+    // Test that Sentry is working by capturing a breadcrumb
+    if (window.Sentry.addBreadcrumb) {
+      window.Sentry.addBreadcrumb({
+        category: 'sentry',
+        message: 'Sentry initialized successfully',
+        level: 'info'
+      });
+    }
+
+    } catch (initError) {
+      console.error("[Sentry] Initialization failed:", initError);
+      return;
+    }
+
     enableSPARouteGuard();
   }
 
   // ---------------- LOAD SDK ----------------
   // Using MINIMAL bundle (errors-only, no tracing, no replay)
   // This bundle does NOT include performance tracing or session replay
+  console.log("[Sentry] Loading SDK...");
+
   var script = document.createElement("script");
   script.src = "https://browser.sentry-cdn.com/8.38.0/bundle.min.js";
   script.crossOrigin = "anonymous";
 
   script.onload = function() {
+    console.log("[Sentry] SDK loaded successfully");
     sentryState.sdkLoaded = true;
+    
+    // Check if Sentry object is available
+    if (typeof window.Sentry === 'undefined') {
+      console.error("[Sentry] SDK loaded but Sentry object not found");
+      return;
+    }
+    
+    console.log("[Sentry] Sentry object available, initializing...");
     setTimeout(initSentry, 10);
   };
-  script.onerror = function() {
-    console.error("[Sentry] SDK load failed");
+
+  script.onerror = function(e) {
+    console.error("[Sentry] SDK load failed:", e);
+    console.error("[Sentry] Failed to load from:", script.src);
   };
 
-  document.head.appendChild(script);
+  if (document.head) {
+    document.head.appendChild(script);
+  } else {
+    console.error("[Sentry] document.head not available");
+    document.addEventListener('DOMContentLoaded', function() {
+      document.head.appendChild(script);
+    });
+  }
 })();`
 };
 
