@@ -26,5 +26,5 @@ module.exports = {
   // quantcast: quantcastTemplate,
   // totango: totangoTemplate,
   // posthog: posthogTemplate,
-  // metaPixel: metaPixelTemplate
+  metaPixel: metaPixelTemplate
 }; 

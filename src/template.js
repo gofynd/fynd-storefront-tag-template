@@ -81,7 +81,7 @@ const templates = {
     // { template_name: 'mparticle', ...mparticleTemplate },
     // { template_name: 'quantcast', ...quantcastTemplate },
     // { template_name: 'posthog', ...posthogTemplate },
-    // { template_name: 'metaPixel', ...metaPixelTemplate },
+    { template_name: 'metaPixel', ...metaPixelTemplate },
     
     // Session Recording & Heatmaps
     // { template_name: 'hotjar', ...hotjarTemplate },
