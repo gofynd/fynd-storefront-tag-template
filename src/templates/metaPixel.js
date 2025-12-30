@@ -39,7 +39,7 @@ const metaPixelTemplate = createTemplate({
         return formData.useGTM === true;
       },
       validation: {
-        pattern: "/^\d{15,16}$/",
+        pattern: "/^[0-9]{15,16}$/",
         message: 'Must be a valid Meta Pixel ID (15-16 digits)',
       }
     },
@@ -73,7 +73,7 @@ const metaPixelTemplate = createTemplate({
         return formData.enableConversionsApi === true;
       },
       validation: {
-        pattern: "/^\d{15,16}$/",
+        pattern: "/^[0-9]{15,16}$/",
         message: 'Must be a valid Meta Pixel ID (15-16 digits)',
       }
     },
