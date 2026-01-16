@@ -41,6 +41,7 @@ const metaPixelTemplate = createTemplate({
       validation: {
         pattern: "/^[0-9]{15,16}$/",
         message: 'Must be a valid Meta Pixel ID (15-16 digits)',
+        required_message: 'Meta Pixel ID is required when GTM Tracking is disabled'
       }
     },
     {
@@ -68,13 +69,14 @@ const metaPixelTemplate = createTemplate({
         return formData.enableConversionsApi === true;
       },
       size: 'full',
-      description: 'Meta Pixel ID for Conversions API',
+      description: 'Meta Pixel ID is required for Conversions API',
       visible: function(formData) {
         return formData.enableConversionsApi === true;
       },
       validation: {
         pattern: "/^[0-9]{15,16}$/",
         message: 'Must be a valid Meta Pixel ID (15-16 digits)',
+        required_message: 'Meta Pixel ID is required when Conversions API is enabled'
       }
     },
     {
@@ -86,13 +88,14 @@ const metaPixelTemplate = createTemplate({
         return formData.enableConversionsApi === true;
       },
       size: 'full',
-      description: 'Access Token for Meta Conversions API',
+      description: 'Access Token is mandatory for Conversions API. Get it from Facebook Business Manager.',
       visible: function(formData) {
         return formData.enableConversionsApi === true;
       },
       validation: {
         pattern: "/^.{50,}$/",
-        message: 'Must be a valid access token',
+        message: 'Access Token is required and must be at least 50 characters',
+        required_message: 'Access Token is required when Conversions API is enabled'
       }
     },
     {
@@ -313,8 +316,118 @@ const metaPixelTemplate = createTemplate({
     columns: 2,
     gap: '20px'
   },
+  
+  // Custom validation function to check all required fields based on current configuration
+  validate: function(formData) {
+    const errors = {};
+    const useGTM = formData.useGTM === true;
+    const enableConversionsApi = formData.enableConversionsApi === true;
+    
+    // Case 1: GTM is OFF - pixelId is required
+    if (!useGTM) {
+      if (!formData.pixelId || formData.pixelId.trim() === '') {
+        errors.pixelId = 'Meta Pixel ID is required when GTM Tracking is disabled';
+      } else if (!/^[0-9]{15,16}$/.test(formData.pixelId.trim())) {
+        errors.pixelId = 'Must be a valid Meta Pixel ID (15-16 digits)';
+      }
+    }
+    
+    // Case 2: Conversions API is ON - both conversionsApiPixelId AND accessToken are required
+    if (enableConversionsApi) {
+      if (!formData.conversionsApiPixelId || formData.conversionsApiPixelId.trim() === '') {
+        errors.conversionsApiPixelId = 'Meta Pixel ID is required for Conversions API';
+      } else if (!/^[0-9]{15,16}$/.test(formData.conversionsApiPixelId.trim())) {
+        errors.conversionsApiPixelId = 'Must be a valid Meta Pixel ID (15-16 digits)';
+      }
+      
+      if (!formData.accessToken || formData.accessToken.trim() === '') {
+        errors.accessToken = 'Access Token is required for Conversions API';
+      } else if (formData.accessToken.trim().length < 50) {
+        errors.accessToken = 'Must be a valid access token (at least 50 characters)';
+      }
+      
+      // Validate testEventCode if provided (optional field)
+      if (formData.testEventCode && formData.testEventCode.trim() !== '') {
+        if (!/^[A-Z0-9]{8,10}$/.test(formData.testEventCode.trim())) {
+          errors.testEventCode = 'Must be a valid test event code (8-10 uppercase alphanumeric characters)';
+        }
+      }
+    }
+    
+    // Case 3: Both GTM ON and Conversions API OFF - no additional fields required (GTM handles it)
+    // Case 4: Both GTM ON and Conversions API ON - only Conversions API fields required (handled above)
+    
+    // Case 5: If neither GTM nor Conversions API provides valid config, require at least one
+    if (useGTM && !enableConversionsApi) {
+      // GTM only mode - this is valid, no additional validation needed
+    }
+    
+    return errors;
+  },
+  
   saveButtonDisabled: function(formData, errors, component) {
-    return !component.isFormValid;
+    const useGTM = formData.useGTM === true;
+    const enableConversionsApi = formData.enableConversionsApi === true;
+    
+    // Run custom validation
+    const validationErrors = this.validate ? this.validate(formData) : {};
+    const hasValidationErrors = Object.keys(validationErrors).length > 0;
+    
+    // Check if form has any errors (from component or custom validation)
+    if (hasValidationErrors) {
+      return true;
+    }
+    
+    // If component has its own validation, also check that
+    if (component && component.isFormValid === false) {
+      return true;
+    }
+    
+    // Scenario 1: GTM is OFF - pixelId must be filled and valid
+    if (!useGTM) {
+      if (!formData.pixelId || formData.pixelId.trim() === '') {
+        return true;
+      }
+      if (!/^[0-9]{15,16}$/.test(formData.pixelId.trim())) {
+        return true;
+      }
+    }
+    
+    // Scenario 2: Conversions API is ON - BOTH conversionsApiPixelId AND accessToken must be filled
+    if (enableConversionsApi) {
+      // Check Pixel ID for Conversions API
+      if (!formData.conversionsApiPixelId || formData.conversionsApiPixelId.trim() === '') {
+        return true;
+      }
+      if (!/^[0-9]{15,16}$/.test(formData.conversionsApiPixelId.trim())) {
+        return true;
+      }
+      
+      // Check Access Token - MANDATORY when Conversions API is enabled
+      if (!formData.accessToken || formData.accessToken.trim() === '') {
+        return true;
+      }
+      if (formData.accessToken.trim().length < 50) {
+        return true;
+      }
+      
+      // Check testEventCode format if provided
+      if (formData.testEventCode && formData.testEventCode.trim() !== '') {
+        if (!/^[A-Z0-9]{8,10}$/.test(formData.testEventCode.trim())) {
+          return true;
+        }
+      }
+    }
+    
+    // Scenario 3: Neither GTM nor direct Pixel - need at least one method
+    // If GTM is OFF and pixelId is empty, and Conversions API is also OFF, block save
+    if (!useGTM && !enableConversionsApi) {
+      if (!formData.pixelId || formData.pixelId.trim() === '') {
+        return true;
+      }
+    }
+    
+    return false;
   }
 });
 
