@@ -206,7 +206,7 @@ const gtmTemplate = createTemplate({
             'currency': "INR",
             'discount': item.discount,
             'item_brand': item.brand ? item.brand.name : '',
-            item_category,
+            'item_category': item_category,
             'price': item.price ? item.price.effective.max : '',
             'quantity': 1
           }];
@@ -224,9 +224,9 @@ const gtmTemplate = createTemplate({
             'item_name': item.name,
             'currency': "INR",
             'discount': item.discount,
-            'item_brand': item.brand.name,
-            item_category,
-            'price': item.price && item.price.effective.max,
+            'item_brand': item.brand ? item.brand.name : '',
+            'item_category': item_category,
+            'price': item.price ? item.price.effective.max : '',
             'quantity': 1
           }];
           break;
@@ -259,13 +259,13 @@ const gtmTemplate = createTemplate({
               'item_name': item.name ? item.name : '',
               'currency': 'INR',
               'discount': item.discount ? item.discount : '',
-              'item_brand': item.brand.name ? item.brand.name : '',
-              'price': item.price.effective.max ? item.price.effective.max : '',
+              'item_brand': item.brand && item.brand.name ? item.brand.name : '',
+              'price': item.price && item.price.effective && item.price.effective.max ? item.price.effective.max : '',
               'quantity': 1,
               'item_list_name': eventData.name || 'Product Listing',
               'item_list_id': eventData.slug || eventData.url || 'listing_page',
               'item_uid': item.uid ? item.uid : '',
-              item_category
+              'item_category': item_category
             };
             itemsOfListing.push(objectToBePushed);
           });
@@ -446,7 +446,24 @@ const gtmTemplate = createTemplate({
     };
 
     const pushToDataLayer = (event, eventData) => {
+      console.log('[GTM] Event:', event);
+      console.log('[GTM] eventData:', eventData);
+      if (eventData.product) {
+        console.log('[GTM] product:', eventData.product);
+      }
+      if (eventData.products) {
+        console.log('[GTM] products:', eventData.products);
+      }
+      if (eventData.items) {
+        console.log('[GTM] items:', eventData.items);
+      }
+      if (eventData.item) {
+        console.log('[GTM] item:', eventData.item);
+      }
+
       const payload = transformData(event, eventData);
+      console.log('[GTM] Transformed payload:', payload);
+
       event = payload.event_action ? payload.event_action : event;
       event = getGTMEventName(event);
       if (event === 'not_known') return;
@@ -457,6 +474,7 @@ const gtmTemplate = createTemplate({
         event,
         ecommerce: payload
       });
+      console.log('[GTM] Pushed to dataLayer:', { event, ecommerce: payload });
     };
 
     function getSkipEvents() {
