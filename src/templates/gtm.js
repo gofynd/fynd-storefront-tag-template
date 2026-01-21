@@ -150,7 +150,8 @@ const gtmTemplate = createTemplate({
 
     const transformData = (event, eventData) => {
       let payload = {};
-
+      console.log('[GTM] Event:', event);
+      console.log('[GTM] eventData:', eventData);
       switch (event) {
         case FPI_EVENTS.SEARCH_PRODUCTS: {
           const { search_text } = eventData;
@@ -234,12 +235,20 @@ const gtmTemplate = createTemplate({
 
         case FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW: {
           const { product } = eventData;
+          // Get category from categories array or category object
+          let item_category = '';
+          if (product.categories && product.categories.length) {
+            item_category = product.categories[0].name || '';
+          } else if (product.category && product.category.name) {
+            item_category = product.category.name;
+          }
+
           payload.items = [{
-            'item_name': product.name,
-            'item_id': product.uid,
-            'item_brand': product.brand.name,
-            'item_category': product.category.name,
-            'price': product.price.max,
+            'item_name': product.name || '',
+            'item_id': product.uid || product.id || '',
+            'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+            'item_category': item_category,
+            'price': product.price ? (product.price.max || product.price.effective || product.price.marked || '') : '',
             'quantity': 1,
             'currency': 'INR'
           }];
@@ -286,15 +295,25 @@ const gtmTemplate = createTemplate({
         case FPI_EVENTS.ADD_TO_CART: {
           const { cart_id, products } = eventData;
           let itemsToBePushed = [];
-          products.forEach(product => itemsToBePushed.push({
-            'item_id': product.uid,
-            'item_name': product.name,
-            'currency': 'INR',
-            'item_brand': product.brand.name,
-            'price': product.price.effective,
-            'quantity': product.quantity.current,
-            'item_category': product.category.name
-          }));
+          products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            itemsToBePushed.push({
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
+              'currency': 'INR',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
+            });
+          });
           payload.items = itemsToBePushed;
           payload.cart_id = cart_id;
           break;
@@ -304,25 +323,33 @@ const gtmTemplate = createTemplate({
           const { products, cart_id, breakup_values } = eventData;
           const itemsOfBag = [];
           products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
             let objectToBePushed = {
-              'item_id': product.uid,
-              'item_name': product.name,
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
               'currency': 'INR',
-              'discount': product.discount,
-              'item_brand': product.brand.name,
-              'price': product.price ? product.price.effective : '',
-              'quantity': product.quantity.current,
-              'item_category': product.category.name
+              'discount': product.discount || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
             };
             itemsOfBag.push(objectToBePushed);
           });
-          payload.value = breakup_values.raw.subtotal;
+          payload.value = breakup_values && breakup_values.raw ? breakup_values.raw.subtotal : '';
           payload.cart_id = cart_id;
           payload.items = itemsOfBag;
-          payload.coupon = breakup_values.raw.coupon;
-          payload.coupon_code = breakup_values.coupon.code;
-          payload.shipping = breakup_values.raw.delivery_charge;
-          payload.discount = breakup_values.raw.discount;
+          payload.coupon = breakup_values && breakup_values.raw ? breakup_values.raw.coupon : '';
+          payload.coupon_code = breakup_values && breakup_values.coupon ? breakup_values.coupon.code : '';
+          payload.shipping = breakup_values && breakup_values.raw ? breakup_values.raw.delivery_charge : '';
+          payload.discount = breakup_values && breakup_values.raw ? breakup_values.raw.discount : '';
           payload.currency = 'INR';
           break;
         }
@@ -351,16 +378,26 @@ const gtmTemplate = createTemplate({
         case FPI_EVENTS.REMOVE_FROM_CART: {
           const { cart_id, products } = eventData;
           let itemsToBePushed = [];
-          products.forEach(product => itemsToBePushed.push({
-            'item_id': product.uid,
-            'item_name': product.name,
-            'currency': 'INR',
-            'discount': product.discount,
-            'item_brand': product.brand.name,
-            'price': product.price ? product.price.effective : '',
-            'quantity': product.quantity.current,
-            'item_category': product.category.name
-          }));
+          products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            itemsToBePushed.push({
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
+              'currency': 'INR',
+              'discount': product.discount || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
+            });
+          });
           payload.items = itemsToBePushed;
           payload.cart_id = cart_id;
           break;
@@ -371,20 +408,28 @@ const gtmTemplate = createTemplate({
           payload.cart_id = cart_id;
           let itemsToBePushed = [];
           products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
             let objectToBePushed = {
-              'item_id': product.uid,
-              'item_name': product.name,
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
               'currency': 'INR',
-              'discount': product.discount,
-              'item_brand': product.brand.name,
-              'price': product.price ? product.price.effective : '',
-              'quantity': product.quantity.current,
-              'item_category': product.category.name
+              'discount': product.discount || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
             };
             itemsToBePushed.push(objectToBePushed);
           });
           payload.currency = 'INR';
-          payload.value = breakup_values_raw.subtotal;
+          payload.value = breakup_values_raw ? breakup_values_raw.subtotal : '';
           payload.items = itemsToBePushed;
           break;
         }
@@ -392,15 +437,23 @@ const gtmTemplate = createTemplate({
         case FPI_EVENTS.UPDATE_CART: {
           const { cart_id, products, operation } = eventData;
           payload.items = products.map(product => {
-            const price = product.price_per_unit.converted.effective;
-            const quantity = product.quantity.current;
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            const price = product.price_per_unit && product.price_per_unit.converted ? product.price_per_unit.converted.effective : (product.price ? product.price.effective : 0);
+            const quantity = product.quantity ? (product.quantity.current || product.quantity) : 1;
             return {
-              'item_name': product.name,
-              'item_id': product.uid,
-              'item_brand': product.brand.name,
-              'item_category': product.category.name,
+              'item_name': product.name || '',
+              'item_id': product.uid || product.id || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'item_category': item_category,
               'price': !isNaN(price * quantity) ? (price * quantity).toFixed(2) : '',
-              'quantity': product.quantity.current,
+              'quantity': quantity,
               'currency': 'INR'
             };
           });
