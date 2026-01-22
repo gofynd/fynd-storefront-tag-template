@@ -9,6 +9,11 @@ const gtmTemplate = createTemplate({
   name: 'Google Tag Manager',
   path: "google-tag-manager",
   description: "Integrate Google Tag Manager for advanced analytics.",
+  help_link: {
+    text: "More information about the google analytics and a link to full documentation",
+    url: "https://developers.google.com/analytics/devguides/collection/ga4/ecommerce?client_type=gtm",
+    label: "click here"
+  },
   template_id: "1001",
   template_version: "1.0.0",
   category: 'analytics',
@@ -547,7 +552,7 @@ const gtmTemplate = createTemplate({
         return skipEvents && skipEvents.includes(ev) ? false : true;
       }).forEach((event) => {
         FPI.event.on(FPI_EVENTS[event], (eventData) => {
-          console.log('FPI ' + event);
+           console.log('FPI ' + event);
           pushToDataLayer(FPI_EVENTS[event], eventData);
         });
       });

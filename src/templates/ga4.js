@@ -9,6 +9,11 @@ const ga4Template = createTemplate({
   path: "google-analytics",
   description: "tracks and reports website traffic, providing insights to help optimize your site's performance.",
   image: "https://cdn.pixelbin.io/v2/falling-surf-7c8bb8/fyndnp/wrkr/x5/misc/pictures/free-icon/original/iejFtwUQr-logo.png",
+  help_link: {
+    text: "More information about the google analytics and a link to full documentation",
+    url: "https://developers.google.com/analytics/devguides/collection/ga4/ecommerce?client_type=gtm",
+    label: "click here"
+  },
   note:"The APP_ID for your Google Analytics account is available on the Google Analytics Dashboard in **Settings > App Settings > Account Settings > APP ID**.",
   template_id: "1003",
   template_version: "1.0.0",
