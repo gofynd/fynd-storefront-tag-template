@@ -91,194 +91,442 @@ const ga4Template = createTemplate({
     });
   });
 
-  function consumeEvent() {
-    const FPI_EVENTS = {
-      LOG_IN: "user.login",
-      LOG_OUT: "user.logout",
-      PROFILE_UPDATE: "user.update",
-      PRODUCT_LIST_VIEW: "product_list.view",
-      COLLECTION_LIST_VIEW: "collection_list.view",
-      PRODUCT_LIST_CLICK: "product_list.click",
-      PRODUCT_FILTER: "product_list.filter",
-      PRODUCT_SORT: "product_list.sort",
-      PRODUCT_DETAIL_PAGE_VIEW: "product.view",
-      NOTIFY_PRODUCT: "notify.product",
-      ADD_TO_COMPARE: "compare.add",
-      REMOVE_FROM_COMPARE: "compare.remove",
-      ADD_TO_WISHLIST: "wishlist.add",
-      REMOVE_FROM_WISHLIST: "wishlist.remove",
-      VIEW_CART: "cart.view",
-      ADD_TO_CART: "cart.newProduct",
-      REMOVE_FROM_CART: "cart.remove",
-      UPDATE_CART: "cart.update",
-      ORDER_CHECKOUT: "order.checkout",
-      ADD_PAYMENT_INFORMATION: "order.payment_information",
-      ADD_ADDRESS_INFORMATION: "order.address_information",
-      ORDER_PROCESSED: "order.processed",
-      ORDER_TRACKING_VIEW: "order_tracking.view",
-      REFUND_SUCCESS: "refund.success",
-      SEARCH_PRODUCTS: "search.products",
-      PINCODE_SERVICEABILITY: "pincode.serviceablility"
+  const consumeEvent = () => {
+    const GA_FPI_EVENTS = {
+      // USER
+      LOG_IN: 'user.login',
+      LOG_OUT: 'user.logout',
+      PROFILE_UPDATE: 'user.update',
+      // PLP
+      PRODUCT_LIST_VIEW: 'product_list.view',
+      COLLECTION_LIST_VIEW: 'collection_list.view',
+      PRODUCT_LIST_CLICK: 'product_list.click',
+      PRODUCT_FILTER: 'product_list.filter',
+      PRODUCT_SORT: 'product_list.sort',
+      // PDP
+      PRODUCT_DETAIL_PAGE_VIEW: 'product.view',
+      NOTIFY_PRODUCT: 'notify.product',
+      ADD_TO_COMPARE: 'compare.add',
+      REMOVE_FROM_COMPARE: 'compare.remove',
+      ADD_TO_WISHLIST: 'wishlist.add',
+      REMOVE_FROM_WISHLIST: 'wishlist.remove',
+      // CART
+      VIEW_CART: 'cart.view',
+      ADD_TO_CART: 'cart.newProduct',
+      REMOVE_FROM_CART: 'cart.remove',
+      UPDATE_CART: 'cart.update',
+      // ORDER
+      ORDER_CHECKOUT: 'order.checkout',
+      ADD_PAYMENT_INFORMATION: 'order.payment_information',
+      ADD_ADDRESS_INFORMATION: 'order.address_information',
+      ORDER_PROCESSED: 'order.processed',
+      ORDER_TRACKING_VIEW: 'order_tracking.view',
+      // REFUND
+      REFUND_SUCCESS: 'refund.success',
+      // SEARCH
+      SEARCH_PRODUCTS: 'search.products',
+      PINCODE_SERVICEABILITY: 'pincode.serviceablility'
     };
 
-    // Map FPI events to GA4 recommended e-commerce event names
-    const getGA4EventName = (event) => {
-      const GA4_EVENTS = {
-        [FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW]: "view_item",
-        [FPI_EVENTS.ADD_TO_CART]: "add_to_cart",
-        [FPI_EVENTS.REMOVE_FROM_CART]: "remove_from_cart",
-        [FPI_EVENTS.ORDER_CHECKOUT]: "begin_checkout",
-        [FPI_EVENTS.ORDER_PROCESSED]: "purchase",
-        [FPI_EVENTS.REFUND_SUCCESS]: "refund",
-        [FPI_EVENTS.PRODUCT_LIST_VIEW]: "view_item_list",
-        [FPI_EVENTS.COLLECTION_LIST_VIEW]: "view_item_list",
-        [FPI_EVENTS.ADD_TO_WISHLIST]: "add_to_wishlist",
-        [FPI_EVENTS.VIEW_CART]: "view_cart",
-        [FPI_EVENTS.SEARCH_PRODUCTS]: "search",
-        [FPI_EVENTS.ADD_PAYMENT_INFORMATION]: "add_payment_info",
-        [FPI_EVENTS.ADD_ADDRESS_INFORMATION]: "add_shipping_info",
-        [FPI_EVENTS.LOG_IN]: "login",
-        [FPI_EVENTS.LOG_OUT]: "logout",
-        [FPI_EVENTS.PRODUCT_LIST_CLICK]: "select_item"
+    const getGAEventName = (event) => {
+      const GA_EVENTS = {
+        [GA_FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW]: 'view_item',
+        [GA_FPI_EVENTS.ADD_TO_CART]: 'add_to_cart',
+        [GA_FPI_EVENTS.REMOVE_FROM_CART]: 'remove_from_cart',
+        [GA_FPI_EVENTS.ORDER_CHECKOUT]: 'begin_checkout',
+        [GA_FPI_EVENTS.ORDER_PROCESSED]: 'purchase',
+        [GA_FPI_EVENTS.REFUND_SUCCESS]: 'refund',
+        [GA_FPI_EVENTS.PRODUCT_LIST_VIEW]: 'view_item_list',
+        [GA_FPI_EVENTS.COLLECTION_LIST_VIEW]: 'view_collection',
+        [GA_FPI_EVENTS.ADD_TO_WISHLIST]: 'add_to_wishlist',
+        [GA_FPI_EVENTS.VIEW_CART]: 'view_cart',
+        [GA_FPI_EVENTS.SEARCH_PRODUCTS]: 'products_searched',
+        [GA_FPI_EVENTS.ADD_PAYMENT_INFORMATION]: 'add_payment_info',
+        [GA_FPI_EVENTS.ADD_ADDRESS_INFORMATION]: 'add_shipping_info',
+        [GA_FPI_EVENTS.LOG_IN]: 'login',
+        [GA_FPI_EVENTS.LOG_OUT]: 'logout',
+        [GA_FPI_EVENTS.PROFILE_UPDATE]: 'profile_update'
       };
-      return GA4_EVENTS[event] || null;
+      return GA_EVENTS[event] || 'not_known';
     };
 
-    // Format product data to GA4 e-commerce item format
-    const formatProductItem = (product, quantity) => {
-      if (!product) return null;
-      
-      const item = {
-        item_id: product.id || product.uid || product.slug,
-        item_name: product.name
-      };
-      
-      if (product.brand && product.brand.name) {
-        item.item_brand = product.brand.name;
-      }
-      
-      if (product.categories && product.categories.length > 0) {
-        item.item_category = product.categories[0].name;
-        if (product.categories.length > 1) {
-          item.item_category2 = product.categories[1].name;
+    const transformDataForGA = (event, eventData) => {
+      let payload = {};
+
+      switch (event) {
+        case GA_FPI_EVENTS.SEARCH_PRODUCTS: {
+          const { search_text } = eventData;
+          payload = {
+            'query': search_text
+          };
+          break;
         }
+
+        case GA_FPI_EVENTS.LOG_IN: {
+          const { user_id, login_value, method, gender, phone_number, email } = eventData;
+          payload = {
+            'user_id': user_id,
+            'login_value': login_value,
+            'method': method,
+            'gender': gender,
+            'email': email,
+            'phone_number': phone_number
+          };
+          break;
+        }
+
+        case GA_FPI_EVENTS.LOG_OUT: {
+          const { user_id, phone, email } = eventData;
+          payload = {
+            'user_id': user_id,
+            'phone': phone,
+            'email': email
+          };
+          break;
+        }
+
+        case GA_FPI_EVENTS.PROFILE_UPDATE: {
+          const { gender, email, phone_number, user_id } = eventData;
+          payload = {
+            'user_id': user_id,
+            'gender': gender,
+            'email': email,
+            'phone_number': phone_number
+          };
+          break;
+        }
+
+        case GA_FPI_EVENTS.ADD_TO_WISHLIST: {
+          const { item } = eventData;
+          let item_category = '';
+          if (item.categories && item.categories.length) {
+            item_category = item.categories[0].name;
+          }
+          payload.items = [{
+            'item_id': item.uid,
+            'item_name': item.name,
+            'currency': 'INR',
+            'discount': item.discount,
+            'item_brand': item.brand ? item.brand.name : '',
+            'item_category': item_category,
+            'price': item.price ? item.price.effective.max : '',
+            'quantity': 1
+          }];
+          break;
+        }
+
+        case GA_FPI_EVENTS.REMOVE_FROM_WISHLIST: {
+          const { item } = eventData;
+          let item_category = '';
+          if (item.categories && item.categories.length) {
+            item_category = item.categories[0].name;
+          }
+          payload.items = [{
+            'item_id': item.uid,
+            'item_name': item.name,
+            'currency': 'INR',
+            'discount': item.discount,
+            'item_brand': item.brand ? item.brand.name : '',
+            'item_category': item_category,
+            'price': item.price ? item.price.effective.max : '',
+            'quantity': 1
+          }];
+          break;
+        }
+
+        case GA_FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW: {
+          const { product } = eventData;
+          // Get category from categories array or category object
+          let item_category = '';
+          if (product.categories && product.categories.length) {
+            item_category = product.categories[0].name || '';
+          } else if (product.category && product.category.name) {
+            item_category = product.category.name;
+          }
+
+          payload.items = [{
+            'item_name': product.name || '',
+            'item_id': product.uid || product.id || '',
+            'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+            'item_category': item_category,
+            'price': product.price ? (product.price.max || product.price.effective || product.price.marked || '') : '',
+            'quantity': 1,
+            'currency': 'INR'
+          }];
+          break;
+        }
+
+        case GA_FPI_EVENTS.PRODUCT_LIST_VIEW: {
+          const { items } = eventData;
+          const itemsOfListing = [];
+          items.forEach(item => {
+            let item_category = '';
+            if (item.categories && item.categories.length) {
+              item_category = item.categories[0].name;
+            }
+            let objectToBePushed = {
+              'item_id': item.item_code ? item.item_code : '',
+              'item_name': item.name ? item.name : '',
+              'currency': 'INR',
+              'discount': item.discount ? item.discount : '',
+              'item_brand': item.brand && item.brand.name ? item.brand.name : '',
+              'price': item.price && item.price.effective && item.price.effective.max ? item.price.effective.max : '',
+              'quantity': 1,
+              'item_list_name': eventData.name || 'Product Listing',
+              'item_list_id': eventData.slug || eventData.url || 'listing_page',
+              'item_uid': item.uid ? item.uid : '',
+              'item_category': item_category
+            };
+            itemsOfListing.push(objectToBePushed);
+          });
+          payload.item_list_name = eventData.name || 'Product Listing';
+          payload.item_list_id = eventData.slug || eventData.url || 'listing_page';
+          payload.items = itemsOfListing;
+          break;
+        }
+
+        case GA_FPI_EVENTS.COLLECTION_LIST_VIEW: {
+          payload.items = [{
+            item_list_name: eventData.name || 'Product Listing',
+            item_list_id: eventData.slug || eventData.url || 'listing_page'
+          }];
+          break;
+        }
+
+        case GA_FPI_EVENTS.ADD_TO_CART: {
+          const { cart_id, products } = eventData;
+          let itemsToBePushed = [];
+          products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            itemsToBePushed.push({
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
+              'currency': 'INR',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
+            });
+          });
+          payload.items = itemsToBePushed;
+          payload.cart_id = cart_id;
+          break;
+        }
+
+        case GA_FPI_EVENTS.ORDER_CHECKOUT: {
+          const { products, cart_id, breakup_values } = eventData;
+          const itemsOfBag = [];
+          products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            let objectToBePushed = {
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
+              'currency': 'INR',
+              'discount': product.discount || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
+            };
+            itemsOfBag.push(objectToBePushed);
+          });
+          payload.value = breakup_values && breakup_values.raw ? breakup_values.raw.subtotal : '';
+          payload.cart_id = cart_id;
+          payload.items = itemsOfBag;
+          payload.coupon = breakup_values && breakup_values.raw ? breakup_values.raw.coupon : '';
+          payload.coupon_code = breakup_values && breakup_values.coupon ? breakup_values.coupon.code : '';
+          payload.shipping = breakup_values && breakup_values.raw ? breakup_values.raw.delivery_charge : '';
+          payload.discount = breakup_values && breakup_values.raw ? breakup_values.raw.discount : '';
+          payload.currency = 'INR';
+          break;
+        }
+
+        case GA_FPI_EVENTS.ADD_PAYMENT_INFORMATION: {
+          const payment_information = eventData;
+          payload.currency = 'INR';
+          payload.value = payment_information.value;
+          payload.coupon = payment_information.coupon ? payment_information.coupon.coupon_code : '';
+          payload.payment_type = payment_information.payment ? payment_information.payment.payment_type : '';
+          payload.shipping = payment_information.delivery_charges;
+          payload.cart_id = payment_information.cart ? payment_information.cart.cart_id : '';
+          break;
+        }
+
+        case GA_FPI_EVENTS.ADD_ADDRESS_INFORMATION: {
+          const payment_information = eventData;
+          payload.currency = 'INR';
+          payload.value = payment_information.value;
+          payload.coupon = payment_information.coupon ? payment_information.coupon.coupon_code : '';
+          payload.pincode = payment_information.pincode;
+          payload.cart_id = payment_information.cart ? payment_information.cart.cart_id : '';
+          break;
+        }
+
+        case GA_FPI_EVENTS.REMOVE_FROM_CART: {
+          const { cart_id, products } = eventData;
+          let itemsToBePushed = [];
+          products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            itemsToBePushed.push({
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
+              'currency': 'INR',
+              'discount': product.discount || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
+            });
+          });
+          payload.items = itemsToBePushed;
+          payload.cart_id = cart_id;
+          break;
+        }
+
+        case GA_FPI_EVENTS.VIEW_CART: {
+          const { cart_id, products, breakup_values_raw } = eventData;
+          payload.cart_id = cart_id;
+          let itemsToBePushed = [];
+          products.forEach(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            let objectToBePushed = {
+              'item_id': product.uid || product.id || '',
+              'item_name': product.name || '',
+              'currency': 'INR',
+              'discount': product.discount || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'price': product.price ? (product.price.effective || product.price.marked || '') : '',
+              'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
+              'item_category': item_category
+            };
+            itemsToBePushed.push(objectToBePushed);
+          });
+          payload.currency = 'INR';
+          payload.value = breakup_values_raw ? breakup_values_raw.subtotal : '';
+          payload.items = itemsToBePushed;
+          break;
+        }
+
+        case GA_FPI_EVENTS.UPDATE_CART: {
+          const { cart_id, products, operation } = eventData;
+          payload.items = products.map(product => {
+            // Get category from categories array or category object
+            let item_category = '';
+            if (product.categories && product.categories.length) {
+              item_category = product.categories[0].name || '';
+            } else if (product.category && product.category.name) {
+              item_category = product.category.name;
+            }
+
+            const price = product.price_per_unit && product.price_per_unit.converted ? product.price_per_unit.converted.effective : (product.price ? product.price.effective : 0);
+            const quantity = product.quantity ? (product.quantity.current || product.quantity) : 1;
+            return {
+              'item_name': product.name || '',
+              'item_id': product.uid || product.id || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : '',
+              'item_category': item_category,
+              'price': !isNaN(price * quantity) ? (price * quantity).toFixed(2) : '',
+              'quantity': quantity,
+              'currency': 'INR'
+            };
+          });
+          payload.cart_id = cart_id;
+          payload.event_action = operation === 'increment_quantity' ? GA_FPI_EVENTS.ADD_TO_CART : operation === 'decrement_quantity' ? GA_FPI_EVENTS.REMOVE_FROM_CART : event;
+          break;
+        }
+
+        case GA_FPI_EVENTS.ORDER_PROCESSED: {
+          const order_data = eventData;
+          payload.transaction_id = order_data.order_id;
+          payload.value = order_data.breakup_values_raw ? order_data.breakup_values_raw.total : '';
+          payload.shipping = order_data.breakup_values_raw ? order_data.breakup_values_raw.delivery_charges : '';
+          payload.currency = 'INR';
+          payload.coupon = order_data.breakup_values_raw ? order_data.breakup_values_raw.coupon : '';
+          payload.items = order_data.items ? order_data.items.map(product => {
+            return {
+              'item_name': product.name || '',
+              'item_id': product.id || '',
+              'item_brand': product.brand && product.brand.name ? product.brand.name : ''
+            };
+          }) : [];
+          break;
+        }
+
+        case GA_FPI_EVENTS.REFUND_SUCCESS: {
+          const { refund_data } = eventData;
+          if (refund_data && refund_data.statuses && refund_data.statuses[0] && refund_data.statuses[0].shipments) {
+            const shipments = refund_data.statuses[0].shipments;
+            payload.transaction_id = Object.keys(shipments)[0];
+          }
+          break;
+        }
+
+        default:
+          payload = eventData;
       }
-      
-      if (product.price) {
-        item.price = product.price.effective || product.price.marked;
-        item.currency = product.price.currency_code || 'INR';
-      }
-      
-      if (quantity) {
-        item.quantity = quantity;
-      }
-      
-      return item;
+
+      return payload;
     };
 
-    // Format event data for GA4
-    const formatEventData = (event, data) => {
-      const eventData = {};
-      
-      // Product data (single product view)
-      if (data.product) {
-        const item = formatProductItem(data.product, 1);
-        if (item) {
-          eventData.items = [item];
-          if (item.price) {
-            eventData.value = item.price;
-            eventData.currency = item.currency || 'INR';
-          }
-        }
-      }
+    const pushToDataLayerGA = (event, eventData) => {
+      console.log('[GA4] Event:', event);
+      console.log('[GA4] eventData:', eventData);
 
-      // Cart data (multiple items)
-      if (data.cart && data.cart.items) {
-        eventData.items = data.cart.items.map(cartItem => {
-          return formatProductItem(cartItem.product, cartItem.quantity || 1);
-        }).filter(Boolean);
-        
-        if (data.cart.breakup_values) {
-          eventData.value = data.cart.breakup_values.raw?.total || 0;
-          eventData.currency = data.cart.currency || 'INR';
-        }
-      }
+      const payload = transformDataForGA(event, eventData);
+      console.log('[GA4] Transformed payload:', payload);
 
-      // Order/Purchase data
-      if (data.order) {
-        if (data.order.order_id) {
-          eventData.transaction_id = data.order.order_id;
-        }
-        
-        if (data.order.bags && data.order.bags.length > 0) {
-          const items = data.order.bags.flatMap(bag => bag.items || []);
-          eventData.items = items.map(item => {
-            return formatProductItem(item.product, item.quantity || 1);
-          }).filter(Boolean);
-        }
+      event = payload.event_action ? payload.event_action : event;
+      event = getGAEventName(event);
+      if (event === 'not_known') return;
 
-        if (data.order.total_details) {
-          eventData.value = data.order.total_details.total;
-          eventData.currency = data.order.total_details.currency || 'INR';
-          if (data.order.total_details.delivery_charge) {
-            eventData.shipping = data.order.total_details.delivery_charge;
-          }
-        }
-      }
-
-      // Product list data
-      if (data.products && Array.isArray(data.products)) {
-        eventData.items = data.products.map((product, index) => {
-          const item = formatProductItem(product, 1);
-          if (item) {
-            item.index = index;
-          }
-          return item;
-        }).filter(Boolean);
-        
-        if (data.list_name || data.collection_name) {
-          eventData.item_list_name = data.list_name || data.collection_name;
-        }
-      }
-
-      // Search data
-      if (data.query || data.search_query) {
-        eventData.search_term = data.query || data.search_query;
-      }
-
-      return eventData;
-    };
-
-    const trackEvent = (event, data) => {
-      const eventName = getGA4EventName(event);
-      if (!eventName) return;
-      
       if (!window.gtag) {
         console.warn('[GA4] gtag not available yet');
         return;
       }
-      
-      const eventData = formatEventData(event, data);
-      
-      // Send to GA4
-      gtag('event', eventName, eventData);
-      console.log('[GA4] Event tracked:', eventName, eventData);
+
+      payload.userAgent = window.navigator.userAgent;
+      gtag('event', event, payload);
+      console.log('[GA4] Event sent:', event, payload);
     };
 
-    const getSkipEvents = () => [];
-
-    if (window.FPI) {
-      Object.keys(FPI_EVENTS)
-        .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
-        .forEach(event => {
-          FPI.event.on(FPI_EVENTS[event], eventData => {
-            console.log("[GA4] FPI " + event);
-            trackEvent(FPI_EVENTS[event], eventData);
-          });
+    if (FPI) {
+      Object.keys(GA_FPI_EVENTS).forEach((event) => {
+        FPI.event.on(GA_FPI_EVENTS[event], (eventData) => {
+          console.log('FPI GA4 ' + event);
+          pushToDataLayerGA(GA_FPI_EVENTS[event], eventData);
         });
+      });
     }
-  }
-  
+  };
+
   consumeEvent();`
 });
 
