@@ -94,7 +94,7 @@ const gtmTemplate = createTemplate({
     });
   });
 
-  const consumeEvent = () => {
+  const consumeGtmEvent = () => {
     const FPI_EVENTS = {
       // USER
       LOG_IN: 'user.login',
@@ -559,7 +559,7 @@ const gtmTemplate = createTemplate({
     }
   };
 
-  consumeEvent();`,
+  consumeGtmEvent();`,
   
   // Optional keys
   image: "https://www.gstatic.com/analytics-suite/header/suite/v2/ic_tag_manager.svg",
