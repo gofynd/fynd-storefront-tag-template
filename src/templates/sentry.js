@@ -58,20 +58,6 @@ const sentryTemplate = {
         pattern: "/^https:\\/\\/[a-f0-9]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}(?::[0-9]{1,5})?\\/[0-9]+$/i",
         message: 'Invalid Sentry DSN.',
       },
-      // Event handlers for real-time value processing
-      events: {
-        // Trim whitespace when user clicks outside the input (blur event)
-        blur: function (value, field, formData, component) {
-          if (value && typeof value === 'string') {
-            var trimmed = value.trim();
-            if (trimmed !== value) {
-              // Update the form data with trimmed value
-              formData[field.name] = trimmed;
-              console.log('[Sentry DSN] Auto-trimmed whitespace on blur');
-            }
-          }
-        }
-      },
     },
     {
       name: 'excludedUrls',
@@ -95,14 +81,9 @@ const sentryTemplate = {
         button_text: 'Add URL Pattern',
         input_size: 'large',  // Size for the input within array field
         button_size: 'small', // Size for the button within array field
-        // Disable button until input has a value (minimum 1 character after trim)
-        button_disabled: function (inputValue) {
-          // Explicitly check for undefined, null, non-string, or empty/whitespace-only
-          if (typeof inputValue !== 'string') {
-            return true; // Disabled
-          }
-          var trimmed = inputValue.trim();
-          return trimmed.length === 0; // Disabled if empty, enabled if has characters
+        // Disable button until input has a value
+        button_disabled: function(inputValue) {
+          return !inputValue || inputValue.trim() === '';
         },
         validation: {
           // Pattern allows: URLs, wildcards (*), paths, extensions
