@@ -4,6 +4,8 @@
 
 const createTemplate = require('../utils/createTemplate');
 
+const isTrue = (value) => value === true || value === 'true';
+
 const metaPixelTemplate = createTemplate({
   // Required keys
   name: 'Meta Pixel',
@@ -29,14 +31,12 @@ const metaPixelTemplate = createTemplate({
       type: 'text',
       label: 'Meta Pixel ID',
       placeholder: 'Enter pixel ID',
-      required: function(formData) {
-        return !formData.useGTM;
-      },
+      required: false, // optional; disabled when GTM is on
       size: 'full',
       description: 'Facebook Pixel ID for your Meta Pixel account is available on the Facebook Business Account in Settings > App Settings > Account Settings > APP ID',
       tooltip: 'Facebook Pixel ID for your Meta Pixel account is available on the Facebook Business Account in Settings > App Settings > Account Settings > APP ID',
       disabled: function(formData) {
-        return formData.useGTM === true;
+        return isTrue(formData.useGTM);
       },
       validation: {
         pattern: "/^[0-9]{15,16}$/",
@@ -66,12 +66,12 @@ const metaPixelTemplate = createTemplate({
       label: 'Meta Pixel ID',
       placeholder: 'Enter pixel ID',
       required: function(formData) {
-        return formData.enableConversionsApi === true;
+        return isTrue(formData.enableConversionsApi);
       },
       size: 'full',
       description: 'Meta Pixel ID is required for Conversions API',
       visible: function(formData) {
-        return formData.enableConversionsApi === true;
+        return isTrue(formData.enableConversionsApi);
       },
       validation: {
         pattern: "/^[0-9]{15,16}$/",
@@ -85,12 +85,12 @@ const metaPixelTemplate = createTemplate({
       label: 'Access Token',
       placeholder: 'Enter access token',
       required: function(formData) {
-        return formData.enableConversionsApi === true;
+        return isTrue(formData.enableConversionsApi);
       },
       size: 'full',
       description: 'Access Token is mandatory for Conversions API. Get it from Facebook Business Manager.',
       visible: function(formData) {
-        return formData.enableConversionsApi === true;
+        return isTrue(formData.enableConversionsApi);
       },
       validation: {
         pattern: "/^.{50,}$/",
@@ -107,7 +107,7 @@ const metaPixelTemplate = createTemplate({
       size: 'full',
       description: 'Use this if you need to test the server-side event. Remove it after testing.',
       visible: function(formData) {
-        return formData.enableConversionsApi === true;
+        return isTrue(formData.enableConversionsApi);
       },
       validation: {
         pattern: "/^[A-Z0-9]{8,10}$/",
@@ -320,14 +320,12 @@ const metaPixelTemplate = createTemplate({
   // Custom validation function to check all required fields based on current configuration
   validate: function(formData) {
     const errors = {};
-    const useGTM = formData.useGTM === true;
-    const enableConversionsApi = formData.enableConversionsApi === true;
+    const useGTM = isTrue(formData.useGTM);
+    const enableConversionsApi = isTrue(formData.enableConversionsApi);
     
-    // Case 1: GTM is OFF - pixelId is required
-    if (!useGTM) {
-      if (!formData.pixelId || formData.pixelId.trim() === '') {
-        errors.pixelId = 'Meta Pixel ID is required when GTM Tracking is disabled';
-      } else if (!/^[0-9]{15,16}$/.test(formData.pixelId.trim())) {
+    // Pixel ID optional; validate format only if provided
+    if (formData.pixelId && formData.pixelId.trim() !== '') {
+      if (!/^[0-9]{15,16}$/.test(formData.pixelId.trim())) {
         errors.pixelId = 'Must be a valid Meta Pixel ID (15-16 digits)';
       }
     }
@@ -366,8 +364,8 @@ const metaPixelTemplate = createTemplate({
   },
   
   saveButtonDisabled: function(formData, errors, component) {
-    const useGTM = formData.useGTM === true;
-    const enableConversionsApi = formData.enableConversionsApi === true;
+    const useGTM = isTrue(formData.useGTM);
+    const enableConversionsApi = isTrue(formData.enableConversionsApi);
     
     // Run custom validation
     const validationErrors = this.validate ? this.validate(formData) : {};
@@ -383,17 +381,7 @@ const metaPixelTemplate = createTemplate({
       return true;
     }
     
-    // Scenario 1: GTM is OFF - pixelId must be filled and valid
-    if (!useGTM) {
-      if (!formData.pixelId || formData.pixelId.trim() === '') {
-        return true;
-      }
-      if (!/^[0-9]{15,16}$/.test(formData.pixelId.trim())) {
-        return true;
-      }
-    }
-    
-    // Scenario 2: Conversions API is ON - BOTH conversionsApiPixelId AND accessToken must be filled
+    // Scenario 1: Conversions API is ON - BOTH conversionsApiPixelId AND accessToken must be filled
     if (enableConversionsApi) {
       // Check Pixel ID for Conversions API
       if (!formData.conversionsApiPixelId || formData.conversionsApiPixelId.trim() === '') {
@@ -416,14 +404,6 @@ const metaPixelTemplate = createTemplate({
         if (!/^[A-Z0-9]{8,10}$/.test(formData.testEventCode.trim())) {
           return true;
         }
-      }
-    }
-    
-    // Scenario 3: Neither GTM nor direct Pixel - need at least one method
-    // If GTM is OFF and pixelId is empty, and Conversions API is also OFF, block save
-    if (!useGTM && !enableConversionsApi) {
-      if (!formData.pixelId || formData.pixelId.trim() === '') {
-        return true;
       }
     }
     
