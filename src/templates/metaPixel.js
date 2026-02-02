@@ -35,8 +35,9 @@ const metaPixelTemplate = createTemplate({
       size: 'full',
       description: 'Facebook Pixel ID for your Meta Pixel account is available on the Facebook Business Account in Settings > App Settings > Account Settings > APP ID',
       tooltip: 'Facebook Pixel ID for your Meta Pixel account is available on the Facebook Business Account in Settings > App Settings > Account Settings > APP ID',
-      disabled: function(formData) {
-        return isTrue(formData.useGTM);
+      disabled_when: {
+        field: 'useGTM',
+        value: true
       },
       validation: {
         pattern: "/^[0-9]{15,16}$/",
@@ -65,13 +66,16 @@ const metaPixelTemplate = createTemplate({
       type: 'text',
       label: 'Meta Pixel ID',
       placeholder: 'Enter pixel ID',
-      required: function(formData) {
-        return isTrue(formData.enableConversionsApi);
+      required: false,
+      required_when: {
+        field: 'enableConversionsApi',
+        value: true
       },
       size: 'full',
       description: 'Meta Pixel ID is required for Conversions API',
-      visible: function(formData) {
-        return isTrue(formData.enableConversionsApi);
+      visible_when: {
+        field: 'enableConversionsApi',
+        value: true
       },
       validation: {
         pattern: "/^[0-9]{15,16}$/",
@@ -84,13 +88,16 @@ const metaPixelTemplate = createTemplate({
       type: 'text',
       label: 'Access Token',
       placeholder: 'Enter access token',
-      required: function(formData) {
-        return isTrue(formData.enableConversionsApi);
+      required: false,
+      required_when: {
+        field: 'enableConversionsApi',
+        value: true
       },
       size: 'full',
       description: 'Access Token is mandatory for Conversions API. Get it from Facebook Business Manager.',
-      visible: function(formData) {
-        return isTrue(formData.enableConversionsApi);
+      visible_when: {
+        field: 'enableConversionsApi',
+        value: true
       },
       validation: {
         pattern: "/^.{50,}$/",
@@ -106,8 +113,9 @@ const metaPixelTemplate = createTemplate({
       required: false,
       size: 'full',
       description: 'Use this if you need to test the server-side event. Remove it after testing.',
-      visible: function(formData) {
-        return isTrue(formData.enableConversionsApi);
+      visible_when: {
+        field: 'enableConversionsApi',
+        value: true
       },
       validation: {
         pattern: "/^[A-Z0-9]{8,10}$/",
