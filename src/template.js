@@ -60,6 +60,7 @@ const qualarooTemplate = require('./templates/qualaroo');
 const quantcastTemplate = require('./templates/quantcast');
 const segmentTemplate = require('./templates/segment');
 const sentryTemplate = require('./templates/sentry');
+const serviceWorkerTemplate = require('./templates/serviceWorker');
 const survicateTemplate = require('./templates/survicate');
 const totangoTemplate = require('./templates/totango');
 const trackjsTemplate = require('./templates/trackjs');
@@ -115,6 +116,9 @@ const templates = {
     // Error Tracking
     { template_name: 'sentry', ...sentryTemplate },
     // { template_name: 'trackjs', ...trackjsTemplate }
+    
+    // Service Workers
+    { template_name: 'serviceWorker', ...serviceWorkerTemplate }
   ]
 };
 
