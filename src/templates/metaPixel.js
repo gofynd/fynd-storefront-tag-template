@@ -123,6 +123,104 @@ const metaPixelTemplate = createTemplate({
       }
     }
   ],
+  events: {
+    pixel: {
+      label: 'Meta Pixel Events',
+      banner: 'Please enable Meta Pixel to enable Meta custom events',
+      items: [
+        {
+          name: 'addToCart',
+          type: 'event',
+          label: 'Add To Cart',
+          description: 'The event is triggered when a visitor adds a product to the cart.',
+          is_enabled: false
+        },
+        {
+          name: 'addToWishlist',
+          type: 'event',
+          label: 'Add To Wishlist',
+          description: 'The event is triggered when a visitor adds a product to the wish list.',
+          is_enabled: false
+        },
+        {
+          name: 'initiateCheckout',
+          type: 'event',
+          label: 'Initiate Checkout',
+          description: 'The event will be triggered when a visitor selects a product or a service, adds it to the cart, and clicks on the checkout button intending to make a purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'purchase',
+          type: 'event',
+          label: 'Purchase',
+          description: 'This event is triggered when the payment is completed, and the receipt is generated. This event can be set to fire when the customer views the "Thank You" page after they purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'search',
+          type: 'event',
+          label: 'Search',
+          description: 'This event refers to the searches that are performed on a website.',
+          is_enabled: false
+        },
+        {
+          name: 'viewContent',
+          type: 'event',
+          label: 'View Content',
+          description: 'This event helps in tracking those who view a specific page on a website. It could be a products description page (PDP) or any kind of landing page. This Meta Pixel function only indicates that a user has visited the specified URL. It helps in remarketing. You can trigger this event on product landing page (PLP), PDP, and homepage.',
+          is_enabled: false
+        }
+      ]
+    },
+    capi: {
+      label: 'Meta Conversion Events',
+      banner: 'Please enable Meta Conversion API to enable Conversion API custom events',
+      items: [
+        {
+          name: 'addToCart',
+          type: 'event',
+          label: 'Add To Cart',
+          description: 'The event is triggered when a visitor adds a product to the cart.',
+          is_enabled: false
+        },
+        {
+          name: 'addToWishlist',
+          type: 'event',
+          label: 'Add To Wishlist',
+          description: 'The event is triggered when a visitor adds a product to the wish list.',
+          is_enabled: false
+        },
+        {
+          name: 'initiateCheckout',
+          type: 'event',
+          label: 'Initiate Checkout',
+          description: 'The event will be triggered when a visitor selects a product or a service, adds it to the cart, and clicks on the checkout button intending to make a purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'purchase',
+          type: 'event',
+          label: 'Purchase',
+          description: 'This event is triggered when the payment is completed, and the receipt is generated. This event can be set to fire when the customer views the "Thank You" page after they purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'search',
+          type: 'event',
+          label: 'Search',
+          description: 'This event refers to the searches that are performed on a website.',
+          is_enabled: false
+        },
+        {
+          name: 'viewContent',
+          type: 'event',
+          label: 'View Content',
+          description: 'This event helps in tracking those who view a specific page on a website. It could be a products description page (PDP) or any kind of landing page. This Meta Pixel function only indicates that a user has visited the specified URL. It helps in remarketing. You can trigger this event on product landing page (PLP), PDP, and homepage.',
+          is_enabled: false
+        }
+      ]
+    }
+  },
   script: `window.addEventListener("load", function() {
     {{#unless useGTM}}
     // Initialize Meta Pixel only if not using GTM
