@@ -107,7 +107,7 @@ const sentryTemplate = {
         validation: {
           // Pattern allows: URLs, wildcards (*), paths, extensions
           // Examples: https://cdn.example.com/*, */analytics.js, chrome-extension://*
-          pattern: "/^[a-zA-Z0-9*_.\\-:\\/]+$/",
+          pattern: "^(?!.*:\\/\\/.*:\\/\\/)(?:(?:\\*|https?|chrome-extension):\\/\\/.+|\\*\\/.+)$",
           message: 'Enter a valid URL pattern. Allowed: letters, numbers, * (wildcard), . _ - : /'
         },
         events: {
