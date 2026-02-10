@@ -87,6 +87,7 @@ const sentryTemplate = {
         "moz-extension://*",
         "https://store-cdn1.fynd.com/*"
       ],
+      url_pattern_already_exists: 'This URL pattern has already been added.',
       size: 'full',
       useTooltip: false,  // Show description as text for array fields
       input_config: {
@@ -107,7 +108,7 @@ const sentryTemplate = {
         validation: {
           // Pattern allows: URLs, wildcards (*), paths, extensions
           // Examples: https://cdn.example.com/*, */analytics.js, chrome-extension://*
-          pattern: "^(?!.*:\\/\\/.*:\\/\\/)(?:(?:\\*|https?|chrome-extension):\\/\\/.+|\\*\\/.+)$",
+          pattern: "^(?!.*:\\/\\/.*:\\/\\/)(?!.*\\*\\*)(?:(?:\\*\\/[A-Za-z0-9._\\-:\\/*]+)|(?:(?:\\*|https?|chrome-extension|moz-extension):\\/\\/[A-Za-z0-9._\\-:\\/*]+))$",
           message: 'Enter a valid URL pattern. Allowed: letters, numbers, * (wildcard), . _ - : /'
         },
         events: {
