@@ -416,7 +416,21 @@ const metaPixelTemplate = createTemplate({
     enableConversionsApi: 'enable_conversions_api',
     conversionsApiPixelId: 'conversions_api_pixel_id',
     accessToken: 'access_token',
-    testEventCode: 'test_event_code'
+    testEventCode: 'test_event_code',
+    // Pixel events
+    'pixel.addToCart': 'pixel_add_to_cart',
+    'pixel.addToWishlist': 'pixel_add_to_wishlist',
+    'pixel.initiateCheckout': 'pixel_initiate_checkout',
+    'pixel.purchase': 'pixel_purchase',
+    'pixel.search': 'pixel_search',
+    'pixel.viewContent': 'pixel_view_content',
+    // CAPI events
+    'capi.addToCart': 'capi_add_to_cart',
+    'capi.addToWishlist': 'capi_add_to_wishlist',
+    'capi.initiateCheckout': 'capi_initiate_checkout',
+    'capi.purchase': 'capi_purchase',
+    'capi.search': 'capi_search',
+    'capi.viewContent': 'capi_view_content'
   },
   layout: {
     columns: 2,
