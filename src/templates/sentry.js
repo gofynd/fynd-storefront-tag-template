@@ -40,6 +40,7 @@ const sentryTemplate = {
       placeholder: 'https://abc123@sentry.example.com/123',
       required: true,
       size: 'full',
+      removeSpaces: true,
       description: 'Find in Settings → Projects → Client Keys (DSN). Format: https://<key>@<host>/<project_id>',
       // Auto-trim leading/trailing whitespace
       transform: function(value) {
