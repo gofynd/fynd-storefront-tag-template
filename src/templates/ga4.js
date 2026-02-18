@@ -121,7 +121,7 @@ const ga4Template = createTemplate({
       REMOVE_FROM_CART: 'cart.remove',
       UPDATE_CART: 'cart.update',
       // ORDER
-      ORDER_CHECKOUT: 'order.checkout',
+      ORDER_CHECKOUT: 'order.checkedout',
       ADD_PAYMENT_INFORMATION: 'order.payment_information',
       ADD_ADDRESS_INFORMATION: 'order.address_information',
       ORDER_PROCESSED: 'order.processed',

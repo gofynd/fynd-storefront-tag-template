@@ -40,6 +40,7 @@ const sentryTemplate = {
       placeholder: 'https://abc123@sentry.example.com/123',
       required: true,
       size: 'full',
+      removeSpaces: true,
       description: 'Find in Settings → Projects → Client Keys (DSN). Format: https://<key>@<host>/<project_id>',
       // Auto-trim leading/trailing whitespace
       transform: function(value) {
@@ -58,6 +59,20 @@ const sentryTemplate = {
         pattern: "/^https:\\/\\/[a-f0-9]+@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}(?::[0-9]{1,5})?\\/[0-9]+$/i",
         message: 'Invalid Sentry DSN.',
       },
+      // Event handlers for real-time value processing
+      events: {
+        // Trim whitespace when user clicks outside the input (blur event)
+        blur: function (value, field, formData, component) {
+          if (value && typeof value === 'string') {
+            var trimmed = value.trim();
+            if (trimmed !== value) {
+              // Update the form data with trimmed value
+              formData[field.name] = trimmed;
+              console.log('[Sentry DSN] Auto-trimmed whitespace on blur');
+            }
+          }
+        }
+      },
     },
     {
       name: 'excludedUrls',
@@ -73,6 +88,7 @@ const sentryTemplate = {
         "moz-extension://*",
         "https://store-cdn1.fynd.com/*"
       ],
+      url_pattern_already_exists: 'This URL pattern has already been added.',
       size: 'full',
       useTooltip: false,  // Show description as text for array fields
       input_config: {
@@ -81,14 +97,19 @@ const sentryTemplate = {
         button_text: 'Add URL Pattern',
         input_size: 'large',  // Size for the input within array field
         button_size: 'small', // Size for the button within array field
-        // Disable button until input has a value
-        button_disabled: function(inputValue) {
-          return !inputValue || inputValue.trim() === '';
+        // Disable button until input has a value (minimum 1 character after trim)
+        button_disabled: function (inputValue) {
+          // Explicitly check for undefined, null, non-string, or empty/whitespace-only
+          if (typeof inputValue !== 'string') {
+            return true; // Disabled
+          }
+          var trimmed = inputValue.trim();
+          return trimmed.length === 0; // Disabled if empty, enabled if has characters
         },
         validation: {
           // Pattern allows: URLs, wildcards (*), paths, extensions
           // Examples: https://cdn.example.com/*, */analytics.js, chrome-extension://*
-          pattern: "/^[a-zA-Z0-9*_.\\-:\\/]+$/",
+          pattern: "^(?!.*:\\/\\/.*:\\/\\/)(?!.*\\*\\*)(?:(?:\\*\\/[A-Za-z0-9._\\-:\\/*]+)|(?:(?:\\*|https?|chrome-extension|moz-extension):\\/\\/[A-Za-z0-9._\\-:\\/*]+))$",
           message: 'Enter a valid URL pattern. Allowed: letters, numbers, * (wildcard), . _ - : /'
         },
         events: {
