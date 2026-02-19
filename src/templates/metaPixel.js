@@ -222,7 +222,7 @@ const metaPixelTemplate = createTemplate({
     }
   },
   script: `window.addEventListener("load", function() {
-    {{#unless useGTM}}
+    if (!{{useGTM}}) {
     // Initialize Meta Pixel only if not using GTM
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -238,7 +238,7 @@ const metaPixelTemplate = createTemplate({
     
     // Track page view
     fbq('track', 'PageView');
-    {{/unless}}
+    }
   });
 
   function consumeEvent() {
@@ -288,6 +288,7 @@ const metaPixelTemplate = createTemplate({
     };
 
     const formatEventData = (event, data) => {
+      console.log('[Meta Pixel] formatEventData:', event, data);
       const eventData = {};
       
       // Standard e-commerce parameters
@@ -368,11 +369,13 @@ const metaPixelTemplate = createTemplate({
 
     const trackEvent = (event, data) => {
       const eventName = getMetaPixelEventName(event);
+      console.log('[Meta Pixel] eventName:', eventName);
       if (!eventName) return;
       
       const eventData = formatEventData(event, data);
+      console.log('[Meta Pixel] eventData:', eventData);
       
-      {{#if useGTM}}
+      if ({{useGTM}}) {
       // Push to GTM dataLayer
       if (window.dataLayer) {
         window.dataLayer.push({
@@ -382,13 +385,13 @@ const metaPixelTemplate = createTemplate({
         });
         console.log('Meta Pixel Event (via GTM):', eventName, eventData);
       }
-      {{else}}
+      } else {
       // Direct Meta Pixel tracking
       if (!window.fbq) return;
       
       fbq('track', eventName, eventData);
       console.log('Meta Pixel Event:', eventName, eventData);
-      {{/if}}
+      }
     };
 
     const getSkipEvents = () => [];
@@ -398,7 +401,7 @@ const metaPixelTemplate = createTemplate({
         .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
         .forEach(event => {
           FPI.event.on(FPI_EVENTS[event], eventData => {
-            console.log("FPI " + event);
+            console.log("FPI [Meta Pixel] " + event);
             trackEvent(FPI_EVENTS[event], eventData);
           });
         });
