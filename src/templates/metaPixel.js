@@ -261,7 +261,7 @@ const metaPixelTemplate = createTemplate({
       ADD_TO_CART: "cart.newProduct",
       REMOVE_FROM_CART: "cart.remove",
       UPDATE_CART: "cart.update",
-      ORDER_CHECKOUT: "order.checkout",
+      ORDER_CHECKOUT: "order.checkedout",
       ADD_PAYMENT_INFORMATION: "order.payment_information",
       ADD_ADDRESS_INFORMATION: "order.address_information",
       ORDER_PROCESSED: "order.processed",
