@@ -120,6 +120,35 @@ const metaPixelTemplate = createTemplate({
       validation: {
         pattern: "/^[A-Z0-9]{8,10}$/",
         message: 'Must be a valid test event code (8-10 uppercase alphanumeric characters)',
+      },
+      button_config: {
+        label: 'Test',
+        theme: 'primary',
+        position: 'inline', // 'inline' means button appears next to input
+        api: {
+          method: 'POST',
+          endpoint: '/api/ext/v1/company/{companyId}/application/{appId}/capi/test',
+          buildPayload: function(formData) {
+            return {
+              test_code: formData.testEventCode,
+              pixel_id: formData.conversionsApiPixelId,
+              access_token: formData.accessToken
+            };
+          },
+          validateBeforeCall: function(formData) {
+            const errors = [];
+            if (!formData.testEventCode || formData.testEventCode.trim() === '') {
+              errors.push('Test Events Code is required');
+            }
+            if (!formData.conversionsApiPixelId || formData.conversionsApiPixelId.trim() === '') {
+              errors.push('Meta Pixel ID is required for testing');
+            }
+            if (!formData.accessToken || formData.accessToken.trim() === '') {
+              errors.push('Access Token is required for testing');
+            }
+            return errors;
+          }
+        }
       }
     }
   ],
