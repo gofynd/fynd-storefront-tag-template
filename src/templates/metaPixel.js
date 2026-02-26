@@ -250,6 +250,8 @@ const metaPixelTemplate = createTemplate({
       ]
     }
   },
+
+  // ✅ UPDATED SCRIPT (Purchase event_id = Purchase_<OrderID>)
   script: `window.addEventListener("load", function() {
     if (!{{useGTM}}) {
     // Initialize Meta Pixel only if not using GTM
@@ -316,6 +318,37 @@ const metaPixelTemplate = createTemplate({
       return META_EVENTS[event] || null;
     };
 
+    // Robust URL param getter (supports query + hash-query)
+    const getParamFromUrl = (key) => {
+      try {
+        const url = new URL(window.location.href);
+
+        // Normal querystring: ?order_id=...
+        const direct = url.searchParams.get(key);
+        if (direct) return direct;
+
+        // Hash-routing cases: /#/path?order_id=...
+        if (url.hash && url.hash.includes("?")) {
+          const hashQuery = url.hash.split("?")[1];
+          const sp = new URLSearchParams(hashQuery);
+          const fromHash = sp.get(key);
+          if (fromHash) return fromHash;
+        }
+
+        return null;
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // Build event_id for Purchase: Purchase_<OrderID>
+    const buildEventId = (eventName, eventData) => {
+      console.log('[Meta Pixel] buildEventId:', eventName, eventData);
+      if (eventName !== "Purchase") return null;
+      if (!eventData || !eventData.order_id) return null;
+      return \`\${eventName}_\${eventData.order_id}\`;
+    };
+
     const formatEventData = (event, data) => {
       console.log('[Meta Pixel] formatEventData:', event, data);
       const eventData = {};
@@ -375,6 +408,14 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
+      // Fallback: for order.processed, order_id is present on thank-you page URL as ?order_id=...
+      if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
+        const oid = getParamFromUrl("order_id");
+        console.log('[Meta Pixel] oid:', oid);
+        if (oid) eventData.order_id = oid;
+        console.log('[Meta Pixel] eventData:', eventData);
+      }
+
       // Search data
       if (data.query || data.search_query) {
         eventData.search_string = data.query || data.search_query;
@@ -398,11 +439,19 @@ const metaPixelTemplate = createTemplate({
 
     const trackEvent = (event, data) => {
       const eventName = getMetaPixelEventName(event);
-      console.log('[Meta Pixel] eventName:', eventName);
+      console.log('[Meta Pixel] trackEvent:', eventName, data);
       if (!eventName) return;
       
       const eventData = formatEventData(event, data);
-      console.log('[Meta Pixel] eventData:', eventData);
+
+      // NEW: event_id for Purchase as Purchase_<OrderID>
+      const eventId = buildEventId(eventName, eventData);
+      console.log('[Meta Pixel] eventId:', eventId);
+      if (eventId) {
+        eventData.event_id = eventId; // keep in payload for debugging / GTM mapping
+      }
+
+      console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
       
       if ({{useGTM}}) {
       // Push to GTM dataLayer
@@ -410,16 +459,23 @@ const metaPixelTemplate = createTemplate({
         window.dataLayer.push({
           'event': 'meta_pixel_event',
           'fb_event_name': eventName,
-          'fb_event_data': eventData
+          'fb_event_data': eventData,
+          'fb_event_id': eventId // NEW
         });
-        console.log('Meta Pixel Event (via GTM):', eventName, eventData);
+        console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
       }
       } else {
       // Direct Meta Pixel tracking
       if (!window.fbq) return;
-      
-      fbq('track', eventName, eventData);
-      console.log('Meta Pixel Event:', eventName, eventData);
+
+      // NEW: pass eventID option for Purchase dedupe
+      if (eventId) {
+        fbq('track', eventName, eventData, { eventID: eventId });
+      } else {
+        fbq('track', eventName, eventData);
+      }
+
+      console.log('Meta Pixel Event:', eventName, eventData, eventId);
       }
     };
 
@@ -563,4 +619,4 @@ const metaPixelTemplate = createTemplate({
   }
 });
 
-module.exports = metaPixelTemplate; 
+module.exports = metaPixelTemplate;
