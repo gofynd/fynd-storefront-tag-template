@@ -341,12 +341,13 @@ const metaPixelTemplate = createTemplate({
       }
     };
 
-    // Build event_id for Purchase: Purchase_<OrderID>
+    // ✅ Build event_id for Purchase: Purchase_<OrderID>
+    // IMPORTANT: use string concatenation (avoid nested template literals inside script:)
     const buildEventId = (eventName, eventData) => {
       console.log('[Meta Pixel] buildEventId:', eventName, eventData);
       if (eventName !== "Purchase") return null;
       if (!eventData || !eventData.order_id) return null;
-      return \`\${eventName}_\${eventData.order_id}\`;
+      return eventName + "_" + eventData.order_id;
     };
 
     const formatEventData = (event, data) => {
@@ -408,12 +409,12 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
-      // Fallback: for order.processed, order_id is present on thank-you page URL as ?order_id=...
+      // ✅ Fallback: for order.processed, order_id is present on thank-you page URL as ?order_id=...
       if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
         const oid = getParamFromUrl("order_id");
         console.log('[Meta Pixel] oid:', oid);
         if (oid) eventData.order_id = oid;
-        console.log('[Meta Pixel] eventData:', eventData);
+        console.log('[Meta Pixel] eventData after oid:', eventData);
       }
 
       // Search data
@@ -437,45 +438,55 @@ const metaPixelTemplate = createTemplate({
       return eventData;
     };
 
+    // ✅ Wrapped in try/catch to prevent silent failures
     const trackEvent = (event, data) => {
-      const eventName = getMetaPixelEventName(event);
-      console.log('[Meta Pixel] trackEvent:', eventName, data);
-      if (!eventName) return;
-      
-      const eventData = formatEventData(event, data);
+      try {
+        const eventName = getMetaPixelEventName(event);
+        console.log('[Meta Pixel] trackEvent:', eventName, data);
+        if (!eventName) return;
+        
+        const eventData = formatEventData(event, data);
 
-      // NEW: event_id for Purchase as Purchase_<OrderID>
-      const eventId = buildEventId(eventName, eventData);
-      console.log('[Meta Pixel] eventId:', eventId);
-      if (eventId) {
-        eventData.event_id = eventId; // keep in payload for debugging / GTM mapping
-      }
+        // event_id for Purchase as Purchase_<OrderID>
+        const eventId = buildEventId(eventName, eventData);
+        console.log('[Meta Pixel] eventId:', eventId);
+        if (eventId) {
+          eventData.event_id = eventId; // keep in payload for debugging / GTM mapping
+        }
 
-      console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
-      
-      if ({{useGTM}}) {
-      // Push to GTM dataLayer
-      if (window.dataLayer) {
-        window.dataLayer.push({
-          'event': 'meta_pixel_event',
-          'fb_event_name': eventName,
-          'fb_event_data': eventData,
-          'fb_event_id': eventId // NEW
-        });
-        console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
-      }
-      } else {
-      // Direct Meta Pixel tracking
-      if (!window.fbq) return;
+        console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
+        
+        if ({{useGTM}}) {
+          // Push to GTM dataLayer
+          if (window.dataLayer) {
+            window.dataLayer.push({
+              event: 'meta_pixel_event',
+              fb_event_name: eventName,
+              fb_event_data: eventData,
+              fb_event_id: eventId
+            });
+            console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
+          } else {
+            console.warn('[Meta Pixel] dataLayer not available');
+          }
+        } else {
+          // Direct Meta Pixel tracking
+          if (!window.fbq) {
+            console.warn('[Meta Pixel] fbq not available');
+            return;
+          }
 
-      // NEW: pass eventID option for Purchase dedupe
-      if (eventId) {
-        fbq('track', eventName, eventData, { eventID: eventId });
-      } else {
-        fbq('track', eventName, eventData);
-      }
+          // pass eventID option for Purchase dedupe
+          if (eventId) {
+            fbq('track', eventName, eventData, { eventID: eventId });
+          } else {
+            fbq('track', eventName, eventData);
+          }
 
-      console.log('Meta Pixel Event:', eventName, eventData, eventId);
+          console.log('Meta Pixel Event:', eventName, eventData, eventId);
+        }
+      } catch (e) {
+        console.error('[Meta Pixel] trackEvent error:', e);
       }
     };
 
@@ -490,6 +501,8 @@ const metaPixelTemplate = createTemplate({
             trackEvent(FPI_EVENTS[event], eventData);
           });
         });
+    } else {
+      console.warn('[Meta Pixel] window.FPI not available');
     }
   }
   
