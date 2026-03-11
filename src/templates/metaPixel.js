@@ -105,26 +105,155 @@ const metaPixelTemplate = createTemplate({
         required_message: 'Access Token is required when Conversions API is enabled'
       }
     },
-    {
-      name: 'testEventCode',
-      type: 'text',
-      label: 'Test Events Code',
-      placeholder: 'Enter test events code',
-      required: false,
-      size: 'full',
-      description: 'Use this if you need to test the server-side event. Remove it after testing.',
-      visible_when: {
-        field: 'enableConversionsApi',
-        value: true
-      },
-      validation: {
-        pattern: "/^[A-Z0-9]{8,10}$/",
-        message: 'Must be a valid test event code (8-10 uppercase alphanumeric characters)',
-      }
-    }
+    // {
+    //   name: 'testEventCode',
+    //   type: 'text',
+    //   label: 'Test Events Code',
+    //   placeholder: 'Enter test events code',
+    //   required: false,
+    //   size: 'full',
+    //   description: 'Use this if you need to test the server-side event. Remove it after testing.',
+    //   visible_when: {
+    //     field: 'enableConversionsApi',
+    //     value: true
+    //   },
+    //   validation: {
+    //     pattern: "/^[A-Za-z0-9]+$/",
+    //     message: 'Must be a valid test event code (alphanumeric characters only)',
+    //   },
+    //   button_config: {
+    //     label: 'Test',
+    //     theme: 'primary',
+    //     position: 'inline',
+    //     api: {
+    //       method: 'POST',
+    //       endpoint: '/api/ext/v1/company/{companyId}/application/{appId}/capi/test',
+    //       buildPayload: function(formData) {
+    //         return {
+    //           test_code: formData.testEventCode,
+    //           pixel_id: formData.conversionsApiPixelId,
+    //           access_token: formData.accessToken
+    //         };
+    //       },
+    //       validateBeforeCall: function(formData) {
+    //         const errors = [];
+    //         if (!formData.testEventCode || formData.testEventCode.trim() === '') {
+    //           errors.push('Test Events Code is required');
+    //         }
+    //         if (!formData.conversionsApiPixelId || formData.conversionsApiPixelId.trim() === '') {
+    //           errors.push('Meta Pixel ID is required for testing');
+    //         }
+    //         if (!formData.accessToken || formData.accessToken.trim() === '') {
+    //           errors.push('Access Token is required for testing');
+    //         }
+    //         return errors;
+    //       }
+    //     }
+    //   }
+    // }
   ],
+  events: {
+    pixel: {
+      label: 'Meta Pixel Events',
+      banner: 'Please enable Meta Pixel to enable Meta custom events',
+      items: [
+        {
+          name: 'addToCart',
+          type: 'event',
+          label: 'Add To Cart',
+          description: 'The event is triggered when a visitor adds a product to the cart.',
+          is_enabled: false
+        },
+        {
+          name: 'addToWishlist',
+          type: 'event',
+          label: 'Add To Wishlist',
+          description: 'The event is triggered when a visitor adds a product to the wish list.',
+          is_enabled: false
+        },
+        {
+          name: 'initiateCheckout',
+          type: 'event',
+          label: 'Initiate Checkout',
+          description: 'The event will be triggered when a visitor selects a product or a service, adds it to the cart, and clicks on the checkout button intending to make a purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'purchase',
+          type: 'event',
+          label: 'Purchase',
+          description: 'This event is triggered when the payment is completed, and the receipt is generated. This event can be set to fire when the customer views the "Thank You" page after they purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'search',
+          type: 'event',
+          label: 'Search',
+          description: 'This event refers to the searches that are performed on a website.',
+          is_enabled: false
+        },
+        {
+          name: 'viewContent',
+          type: 'event',
+          label: 'View Content',
+          description: 'This event helps in tracking those who view a specific page on a website. It could be a products description page (PDP) or any kind of landing page. This Meta Pixel function only indicates that a user has visited the specified URL. It helps in remarketing. You can trigger this event on product landing page (PLP), PDP, and homepage.',
+          is_enabled: false
+        }
+      ]
+    },
+    capi: {
+      label: 'Meta Conversion Events',
+      banner: 'Please enable Meta Conversion API to enable Conversion API custom events',
+      items: [
+        {
+          name: 'addToCart',
+          type: 'event',
+          label: 'Add To Cart',
+          description: 'The event is triggered when a visitor adds a product to the cart.',
+          is_enabled: false
+        },
+        {
+          name: 'addToWishlist',
+          type: 'event',
+          label: 'Add To Wishlist',
+          description: 'The event is triggered when a visitor adds a product to the wish list.',
+          is_enabled: false
+        },
+        {
+          name: 'initiateCheckout',
+          type: 'event',
+          label: 'Initiate Checkout',
+          description: 'The event will be triggered when a visitor selects a product or a service, adds it to the cart, and clicks on the checkout button intending to make a purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'purchase',
+          type: 'event',
+          label: 'Purchase',
+          description: 'This event is triggered when the payment is completed, and the receipt is generated. This event can be set to fire when the customer views the "Thank You" page after they purchase.',
+          is_enabled: false
+        },
+        {
+          name: 'search',
+          type: 'event',
+          label: 'Search',
+          description: 'This event refers to the searches that are performed on a website.',
+          is_enabled: false
+        },
+        {
+          name: 'viewContent',
+          type: 'event',
+          label: 'View Content',
+          description: 'This event helps in tracking those who view a specific page on a website. It could be a products description page (PDP) or any kind of landing page. This Meta Pixel function only indicates that a user has visited the specified URL. It helps in remarketing. You can trigger this event on product landing page (PLP), PDP, and homepage.',
+          is_enabled: false
+        }
+      ]
+    }
+  },
+
+  // ✅ UPDATED SCRIPT (Purchase event_id = Purchase_<OrderID>)
   script: `window.addEventListener("load", function() {
-    {{#unless useGTM}}
+    if (!{{useGTM}}) {
     // Initialize Meta Pixel only if not using GTM
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -140,7 +269,7 @@ const metaPixelTemplate = createTemplate({
     
     // Track page view
     fbq('track', 'PageView');
-    {{/unless}}
+    }
   });
 
   function consumeEvent() {
@@ -163,7 +292,7 @@ const metaPixelTemplate = createTemplate({
       ADD_TO_CART: "cart.newProduct",
       REMOVE_FROM_CART: "cart.remove",
       UPDATE_CART: "cart.update",
-      ORDER_CHECKOUT: "order.checkout",
+      ORDER_CHECKOUT: "order.checkedout",
       ADD_PAYMENT_INFORMATION: "order.payment_information",
       ADD_ADDRESS_INFORMATION: "order.address_information",
       ORDER_PROCESSED: "order.processed",
@@ -171,6 +300,23 @@ const metaPixelTemplate = createTemplate({
       REFUND_SUCCESS: "refund.success",
       SEARCH_PRODUCTS: "search.products",
       PINCODE_SERVICEABILITY: "pincode.serviceablility"
+    };
+
+    // FIX 1: Prevent multiple bindings (SPA / multiple injections)
+    if (window.__META_PIXEL_FPI_BOUND__) {
+      console.log('[Meta Pixel] FPI listeners already bound, skipping re-bind');
+      return;
+    }
+    window.__META_PIXEL_FPI_BOUND__ = true;
+    // FIX 2: De-dupe Search events (identical query within 800ms)
+    let __lastSearch = { value: null, ts: 0 };
+    const shouldSkipDuplicateSearch = (eventName, eventData) => {
+      if (eventName !== "Search") return false;
+      const q = (eventData && eventData.search_string) ? String(eventData.search_string) : "";
+      const now = Date.now();
+      if (q && __lastSearch.value === q && (now - __lastSearch.ts) < 800) return true;
+      __lastSearch = { value: q, ts: now };
+      return false;
     };
 
     const getMetaPixelEventName = (event) => {
@@ -189,7 +335,40 @@ const metaPixelTemplate = createTemplate({
       return META_EVENTS[event] || null;
     };
 
+    // Robust URL param getter (supports query + hash-query)
+    const getParamFromUrl = (key) => {
+      try {
+        const url = new URL(window.location.href);
+
+        // Normal querystring: ?order_id=...
+        const direct = url.searchParams.get(key);
+        if (direct) return direct;
+
+        // Hash-routing cases: /#/path?order_id=...
+        if (url.hash && url.hash.includes("?")) {
+          const hashQuery = url.hash.split("?")[1];
+          const sp = new URLSearchParams(hashQuery);
+          const fromHash = sp.get(key);
+          if (fromHash) return fromHash;
+        }
+
+        return null;
+      } catch (e) {
+        return null;
+      }
+    };
+
+    // ✅ Build event_id for Purchase: Purchase_<OrderID>
+    // IMPORTANT: use string concatenation (avoid nested template literals inside script:)
+    const buildEventId = (eventName, eventData) => {
+      console.log('[Meta Pixel] buildEventId:', eventName, eventData);
+      if (eventName !== "Purchase") return null;
+      if (!eventData || !eventData.order_id) return null;
+      return eventName + "_" + eventData.order_id;
+    };
+
     const formatEventData = (event, data) => {
+      console.log('[Meta Pixel] formatEventData:', event, data);
       const eventData = {};
       
       // Standard e-commerce parameters
@@ -247,9 +426,24 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
+      // ✅ Fallback: for order.processed, order_id is present on thank-you page URL as ?order_id=...
+      if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
+        const oid = getParamFromUrl("order_id");
+        console.log('[Meta Pixel] oid:', oid);
+        if (oid) eventData.order_id = oid;
+        console.log('[Meta Pixel] eventData after oid:', eventData);
+      }
+
       // Search data
       if (data.query || data.search_query) {
         eventData.search_string = data.query || data.search_query;
+      } else if (event === FPI_EVENTS.SEARCH_PRODUCTS) {
+        const q =
+          getParamFromUrl("q") ||
+          getParamFromUrl("query") ||
+          getParamFromUrl("search") ||
+          getParamFromUrl("term");
+        if (q) eventData.search_string = q;
       }
 
       // User data for advanced matching
@@ -268,29 +462,56 @@ const metaPixelTemplate = createTemplate({
       return eventData;
     };
 
+    // ✅ Wrapped in try/catch to prevent silent failures
     const trackEvent = (event, data) => {
-      const eventName = getMetaPixelEventName(event);
-      if (!eventName) return;
-      
-      const eventData = formatEventData(event, data);
-      
-      {{#if useGTM}}
-      // Push to GTM dataLayer
-      if (window.dataLayer) {
-        window.dataLayer.push({
-          'event': 'meta_pixel_event',
-          'fb_event_name': eventName,
-          'fb_event_data': eventData
-        });
-        console.log('Meta Pixel Event (via GTM):', eventName, eventData);
+      try {
+        const eventName = getMetaPixelEventName(event);
+        console.log('[Meta Pixel] trackEvent:', eventName, data);
+        if (!eventName) return;
+        
+        const eventData = formatEventData(event, data);
+
+        // event_id for Purchase as Purchase_<OrderID>
+        const eventId = buildEventId(eventName, eventData);
+        console.log('[Meta Pixel] eventId:', eventId);
+        if (eventId) {
+          eventData.event_id = eventId; // keep in payload for debugging / GTM mapping
+        }
+
+        console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
+        
+        if ({{useGTM}}) {
+          // Push to GTM dataLayer
+          if (window.dataLayer) {
+            window.dataLayer.push({
+              event: 'meta_pixel_event',
+              fb_event_name: eventName,
+              fb_event_data: eventData,
+              fb_event_id: eventId
+            });
+            console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
+          } else {
+            console.warn('[Meta Pixel] dataLayer not available');
+          }
+        } else {
+          // Direct Meta Pixel tracking
+          if (!window.fbq) {
+            console.warn('[Meta Pixel] fbq not available');
+            return;
+          }
+
+          // pass eventID option for Purchase dedupe
+          if (eventId) {
+            fbq('track', eventName, eventData, { eventID: eventId });
+          } else {
+            fbq('track', eventName, eventData);
+          }
+
+          console.log('Meta Pixel Event:', eventName, eventData, eventId);
+        }
+      } catch (e) {
+        console.error('[Meta Pixel] trackEvent error:', e);
       }
-      {{else}}
-      // Direct Meta Pixel tracking
-      if (!window.fbq) return;
-      
-      fbq('track', eventName, eventData);
-      console.log('Meta Pixel Event:', eventName, eventData);
-      {{/if}}
     };
 
     const getSkipEvents = () => [];
@@ -300,10 +521,12 @@ const metaPixelTemplate = createTemplate({
         .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
         .forEach(event => {
           FPI.event.on(FPI_EVENTS[event], eventData => {
-            console.log("FPI " + event);
+            console.log("FPI [Meta Pixel] " + event);
             trackEvent(FPI_EVENTS[event], eventData);
           });
         });
+    } else {
+      console.warn('[Meta Pixel] window.FPI not available');
     }
   }
   
@@ -318,7 +541,21 @@ const metaPixelTemplate = createTemplate({
     enableConversionsApi: 'enable_conversions_api',
     conversionsApiPixelId: 'conversions_api_pixel_id',
     accessToken: 'access_token',
-    testEventCode: 'test_event_code'
+    testEventCode: 'test_event_code',
+    // Pixel events
+    'pixel.addToCart': 'pixel_add_to_cart',
+    'pixel.addToWishlist': 'pixel_add_to_wishlist',
+    'pixel.initiateCheckout': 'pixel_initiate_checkout',
+    'pixel.purchase': 'pixel_purchase',
+    'pixel.search': 'pixel_search',
+    'pixel.viewContent': 'pixel_view_content',
+    // CAPI events
+    'capi.addToCart': 'capi_add_to_cart',
+    'capi.addToWishlist': 'capi_add_to_wishlist',
+    'capi.initiateCheckout': 'capi_initiate_checkout',
+    'capi.purchase': 'capi_purchase',
+    'capi.search': 'capi_search',
+    'capi.viewContent': 'capi_view_content'
   },
   layout: {
     columns: 2,
@@ -419,4 +656,4 @@ const metaPixelTemplate = createTemplate({
   }
 });
 
-module.exports = metaPixelTemplate; 
+module.exports = metaPixelTemplate;
