@@ -254,7 +254,6 @@ const metaPixelTemplate = createTemplate({
   // ✅ UPDATED SCRIPT (Purchase event_id = Purchase_<OrderID>)
   script: `window.addEventListener("load", function() {
     if (!{{useGTM}}) {
-    // Initialize Meta Pixel only if not using GTM
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -264,10 +263,7 @@ const metaPixelTemplate = createTemplate({
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
-    // Initialize pixel
     fbq('init', '{{pixelId}}');
-    
-    // Track page view
     fbq('track', 'PageView');
     }
   });
@@ -302,14 +298,14 @@ const metaPixelTemplate = createTemplate({
       PINCODE_SERVICEABILITY: "pincode.serviceablility"
     };
 
-    // ✅ FIX 1: Prevent multiple bindings (SPA / multiple injections)
+    // ✅ Prevent multiple bindings
     if (window.__META_PIXEL_FPI_BOUND__) {
       console.log('[Meta Pixel] FPI listeners already bound, skipping re-bind');
       return;
     }
     window.__META_PIXEL_FPI_BOUND__ = true;
 
-    // ✅ FIX 2: Debounce Search so continuous typing doesn’t fire multiple Search events
+    // ✅ Debounce Search (only for non-autocomplete search triggers)
     let __searchTimer = null;
     let __lastSearchSent = "";
     let __pendingSearch = null;
@@ -317,7 +313,7 @@ const metaPixelTemplate = createTemplate({
 
     const scheduleSearch = (sendFn, eventName, eventData, eventId) => {
       const q = (eventData && eventData.search_string) ? String(eventData.search_string).trim() : "";
-      if (!q || q.length < 2) return; // ignore empty/1-char queries
+      if (!q || q.length < 2) return;
 
       __pendingSearch = { eventName, eventData, eventId };
 
@@ -350,23 +346,18 @@ const metaPixelTemplate = createTemplate({
       return META_EVENTS[event] || null;
     };
 
-    // Robust URL param getter (supports query + hash-query)
     const getParamFromUrl = (key) => {
       try {
         const url = new URL(window.location.href);
-
-        // Normal querystring
         const direct = url.searchParams.get(key);
         if (direct) return direct;
 
-        // Hash-routing query
         if (url.hash && url.hash.includes("?")) {
           const hashQuery = url.hash.split("?")[1];
           const sp = new URLSearchParams(hashQuery);
           const fromHash = sp.get(key);
           if (fromHash) return fromHash;
         }
-
         return null;
       } catch (e) {
         return null;
@@ -377,19 +368,34 @@ const metaPixelTemplate = createTemplate({
     const buildEventId = (eventName, eventData) => {
       if (eventName !== "Purchase") return null;
       if (!eventData || !eventData.order_id) return null;
-      return eventName + "_" + eventData.order_id; // safe string concat
+      return eventName + "_" + eventData.order_id;
+    };
+
+    // ✅ Extract search term from your payload shape
+    const extractSearchString = (data) => {
+      if (!data) return null;
+
+      // Your payload has this:
+      if (data.search_text) return data.search_text;
+
+      // Sometimes the full suggestion exists here:
+      try {
+        const first = data.items && data.items[0];
+        const qArr = first && first.action && first.action.page && first.action.page.query && first.action.page.query.q;
+        if (Array.isArray(qArr) && qArr[0]) return qArr[0];
+      } catch (e) {}
+
+      return null;
     };
 
     const formatEventData = (event, data) => {
       console.log('[Meta Pixel] formatEventData:', event, data);
       const eventData = {};
 
-      // Standard e-commerce parameters
       if (data.value || data.total_amount || data.amount) {
         eventData.value = data.value || data.total_amount || data.amount;
       }
 
-      // Product data
       if (data.product) {
         eventData.content_ids = [data.product.id || data.product.uid];
         eventData.content_name = data.product.name;
@@ -405,7 +411,6 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
-      // Cart/Order data
       if (data.cart && data.cart.items) {
         eventData.content_ids = data.cart.items.map(item => item.product.id || item.product.uid);
         eventData.contents = data.cart.items.map(item => ({
@@ -416,7 +421,6 @@ const metaPixelTemplate = createTemplate({
         eventData.num_items = data.cart.items.length;
       }
 
-      // Order data
       if (data.order) {
         if (data.order.order_id) eventData.order_id = data.order.order_id;
 
@@ -437,25 +441,28 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
-      // ✅ Purchase fallback: order_id from thank-you page URL ?order_id=...
+      // ✅ Purchase fallback
       if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
         const oid = getParamFromUrl("order_id");
         if (oid) eventData.order_id = oid;
       }
 
-      // ✅ Search string: prefer payload keys, else fallback to URL params
-      if (data.query || data.search_query) {
-        eventData.search_string = data.query || data.search_query;
-      } else if (event === FPI_EVENTS.SEARCH_PRODUCTS) {
-        const q =
+      // ✅ Search string fix
+      if (event === FPI_EVENTS.SEARCH_PRODUCTS) {
+        const fromPayload = extractSearchString(data);
+        const fromUrl =
           getParamFromUrl("q") ||
           getParamFromUrl("query") ||
           getParamFromUrl("search") ||
-          getParamFromUrl("term");
-        if (q) eventData.search_string = q;
+          getParamFromUrl("term") ||
+          getParamFromUrl("text");
+
+        const q = fromPayload || fromUrl;
+        if (q) eventData.search_string = String(q);
+
+        console.log('[Meta Pixel] resolved search_string:', eventData.search_string, 'source:', data && data.source);
       }
 
-      // User data for advanced matching
       if (data.user) {
         const userData = {};
         if (data.user.email) userData.em = data.user.email;
@@ -481,7 +488,7 @@ const metaPixelTemplate = createTemplate({
         const eventId = buildEventId(eventName, eventData);
         if (eventId) eventData.event_id = eventId;
 
-        // ✅ IMPORTANT: Use GTM only if enabled AND dataLayer exists; else fall back to fbq
+        // ✅ Decide GTM usage (only if enabled AND dataLayer exists)
         const shouldUseGTM = ({{useGTM}} && Array.isArray(window.dataLayer));
 
         const sendNow = (evName, evData, evId) => {
@@ -496,9 +503,8 @@ const metaPixelTemplate = createTemplate({
             return;
           }
 
-          // Direct Meta Pixel tracking fallback
           if (!window.fbq) {
-            console.warn('[Meta Pixel] fbq not available (init might be waiting for window load)');
+            console.warn('[Meta Pixel] fbq not available');
             return;
           }
 
@@ -508,10 +514,16 @@ const metaPixelTemplate = createTemplate({
           console.log('Meta Pixel Event (direct):', evName, evData, evId);
         };
 
-        // ✅ Debounce Search (prevents warnings when typing continuously)
+        // ✅ Search behavior: SKIP autocomplete to avoid spam + Pixel Helper warnings
         if (eventName === "Search") {
+          if (data && data.source === "autocomplete") {
+            console.log('[Meta Pixel] skipping Search (autocomplete)', eventData.search_string);
+            return;
+          }
+
+          // If not autocomplete, debounce as extra safety
           scheduleSearch(sendNow, eventName, eventData, eventId);
-          console.log('[Meta Pixel] Search debounced:', eventData.search_string);
+          console.log('[Meta Pixel] Search scheduled:', eventData.search_string);
           return;
         }
 
