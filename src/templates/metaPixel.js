@@ -309,7 +309,7 @@ const metaPixelTemplate = createTemplate({
     }
     window.__META_PIXEL_FPI_BOUND__ = true;
 
-    // ✅ FIX 2: Debounce Search (don’t fire on every keystroke)
+    // ✅ FIX 2: Debounce Search so continuous typing doesn’t fire multiple Search events
     let __searchTimer = null;
     let __lastSearchSent = "";
     let __pendingSearch = null;
@@ -355,11 +355,11 @@ const metaPixelTemplate = createTemplate({
       try {
         const url = new URL(window.location.href);
 
-        // Normal querystring: ?x=...
+        // Normal querystring
         const direct = url.searchParams.get(key);
         if (direct) return direct;
 
-        // Hash-routing cases: /#/path?x=...
+        // Hash-routing query
         if (url.hash && url.hash.includes("?")) {
           const hashQuery = url.hash.split("?")[1];
           const sp = new URLSearchParams(hashQuery);
@@ -377,7 +377,7 @@ const metaPixelTemplate = createTemplate({
     const buildEventId = (eventName, eventData) => {
       if (eventName !== "Purchase") return null;
       if (!eventData || !eventData.order_id) return null;
-      return eventName + "_" + eventData.order_id; // string concat (safe inside script:)
+      return eventName + "_" + eventData.order_id; // safe string concat
     };
 
     const formatEventData = (event, data) => {
@@ -418,9 +418,7 @@ const metaPixelTemplate = createTemplate({
 
       // Order data
       if (data.order) {
-        if (data.order.order_id) {
-          eventData.order_id = data.order.order_id;
-        }
+        if (data.order.order_id) eventData.order_id = data.order.order_id;
 
         if (data.order.bags && data.order.bags.length > 0) {
           const items = data.order.bags.flatMap(bag => bag.items || []);
@@ -439,13 +437,13 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
-      // ✅ Purchase fallback: order_id from thank-you URL ?order_id=...
+      // ✅ Purchase fallback: order_id from thank-you page URL ?order_id=...
       if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
         const oid = getParamFromUrl("order_id");
         if (oid) eventData.order_id = oid;
       }
 
-      // ✅ Search: prefer payload keys, else fallback to URL params (?q= / ?query= / ?search= / ?term=)
+      // ✅ Search string: prefer payload keys, else fallback to URL params
       if (data.query || data.search_query) {
         eventData.search_string = data.query || data.search_query;
       } else if (event === FPI_EVENTS.SEARCH_PRODUCTS) {
@@ -483,30 +481,31 @@ const metaPixelTemplate = createTemplate({
         const eventId = buildEventId(eventName, eventData);
         if (eventId) eventData.event_id = eventId;
 
-        // Single sender function (GTM or direct)
-        const sendNow = (evName, evData, evId) => {
-          if ({{useGTM}}) {
-            if (window.dataLayer) {
-              window.dataLayer.push({
-                event: 'meta_pixel_event',
-                fb_event_name: evName,
-                fb_event_data: evData,
-                fb_event_id: evId
-              });
-              console.log('Meta Pixel Event (via GTM):', evName, evData, evId);
-            } else {
-              console.warn('[Meta Pixel] dataLayer not available');
-            }
-          } else {
-            if (!window.fbq) {
-              console.warn('[Meta Pixel] fbq not available');
-              return;
-            }
-            if (evId) fbq('track', evName, evData, { eventID: evId });
-            else fbq('track', evName, evData);
+        // ✅ IMPORTANT: Use GTM only if enabled AND dataLayer exists; else fall back to fbq
+        const shouldUseGTM = ({{useGTM}} && Array.isArray(window.dataLayer));
 
-            console.log('Meta Pixel Event:', evName, evData, evId);
+        const sendNow = (evName, evData, evId) => {
+          if (shouldUseGTM) {
+            window.dataLayer.push({
+              event: 'meta_pixel_event',
+              fb_event_name: evName,
+              fb_event_data: evData,
+              fb_event_id: evId
+            });
+            console.log('Meta Pixel Event (via GTM):', evName, evData, evId);
+            return;
           }
+
+          // Direct Meta Pixel tracking fallback
+          if (!window.fbq) {
+            console.warn('[Meta Pixel] fbq not available (init might be waiting for window load)');
+            return;
+          }
+
+          if (evId) fbq('track', evName, evData, { eventID: evId });
+          else fbq('track', evName, evData);
+
+          console.log('Meta Pixel Event (direct):', evName, evData, evId);
         };
 
         // ✅ Debounce Search (prevents warnings when typing continuously)
