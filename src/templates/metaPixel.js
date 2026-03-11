@@ -254,6 +254,7 @@ const metaPixelTemplate = createTemplate({
   // ✅ UPDATED SCRIPT (Purchase event_id = Purchase_<OrderID>)
   script: `window.addEventListener("load", function() {
     if (!{{useGTM}}) {
+    // Initialize Meta Pixel only if not using GTM
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};
@@ -263,7 +264,10 @@ const metaPixelTemplate = createTemplate({
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
+    // Initialize pixel
     fbq('init', '{{pixelId}}');
+
+    // Track page view
     fbq('track', 'PageView');
     }
   });
@@ -272,7 +276,7 @@ const metaPixelTemplate = createTemplate({
     const FPI_EVENTS = {
       LOG_IN: "user.login",
       LOG_OUT: "user.logout",
-      PROFILE_UPDATE: "user.update", 
+      PROFILE_UPDATE: "user.update",
       PRODUCT_LIST_VIEW: "product_list.view",
       COLLECTION_LIST_VIEW: "collection_list.view",
       PRODUCT_LIST_CLICK: "product_list.click",
@@ -298,22 +302,24 @@ const metaPixelTemplate = createTemplate({
       PINCODE_SERVICEABILITY: "pincode.serviceablility"
     };
 
-    // ✅ Prevent multiple bindings
+    // ✅ FIX 1: Prevent multiple FPI bindings (SPA / multiple injections)
     if (window.__META_PIXEL_FPI_BOUND__) {
       console.log('[Meta Pixel] FPI listeners already bound, skipping re-bind');
       return;
     }
     window.__META_PIXEL_FPI_BOUND__ = true;
 
-    // ✅ Debounce Search (only for non-autocomplete search triggers)
+    // ✅ FIX 2: Search debounce + TTL dedupe (prevents "fired twice" warnings)
     let __searchTimer = null;
-    let __lastSearchSent = "";
     let __pendingSearch = null;
-    const SEARCH_DEBOUNCE_MS = 900;
+    const SEARCH_DEBOUNCE_MS = 900; // send after user pauses typing
+    const MIN_QUERY_LEN = 2;        // ignore tiny queries
+    const SEARCH_TTL_MS = 30000;    // don't send same query again for 30s
+    const __searchSeen = {};        // { query: timestamp }
 
     const scheduleSearch = (sendFn, eventName, eventData, eventId) => {
       const q = (eventData && eventData.search_string) ? String(eventData.search_string).trim() : "";
-      if (!q || q.length < 2) return;
+      if (!q || q.length < MIN_QUERY_LEN) return;
 
       __pendingSearch = { eventName, eventData, eventId };
 
@@ -321,11 +327,28 @@ const metaPixelTemplate = createTemplate({
       __searchTimer = setTimeout(() => {
         if (!__pendingSearch) return;
 
-        const latestQ = (__pendingSearch.eventData.search_string || "").trim();
-        if (latestQ && latestQ !== __lastSearchSent) {
-          __lastSearchSent = latestQ;
-          sendFn(__pendingSearch.eventName, __pendingSearch.eventData, __pendingSearch.eventId);
+        const latestQ = String(__pendingSearch.eventData.search_string || "").trim();
+        const now = Date.now();
+
+        // cleanup old entries
+        Object.keys(__searchSeen).forEach(k => {
+          if (now - __searchSeen[k] > SEARCH_TTL_MS) delete __searchSeen[k];
+        });
+
+        // TTL dedupe: don't send same query repeatedly
+        if (!latestQ || latestQ.length < MIN_QUERY_LEN) {
+          __pendingSearch = null;
+          return;
         }
+
+        if (!__searchSeen[latestQ]) {
+          __searchSeen[latestQ] = now;
+          sendFn(__pendingSearch.eventName, __pendingSearch.eventData, __pendingSearch.eventId);
+          console.log('[Meta Pixel] Search sent (debounced+ttl):', latestQ);
+        } else {
+          console.log('[Meta Pixel] Search skipped (ttl dedupe):', latestQ);
+        }
+
         __pendingSearch = null;
       }, SEARCH_DEBOUNCE_MS);
     };
@@ -346,9 +369,11 @@ const metaPixelTemplate = createTemplate({
       return META_EVENTS[event] || null;
     };
 
+    // Robust URL param getter (supports query + hash-query)
     const getParamFromUrl = (key) => {
       try {
         const url = new URL(window.location.href);
+
         const direct = url.searchParams.get(key);
         if (direct) return direct;
 
@@ -358,6 +383,7 @@ const metaPixelTemplate = createTemplate({
           const fromHash = sp.get(key);
           if (fromHash) return fromHash;
         }
+
         return null;
       } catch (e) {
         return null;
@@ -371,20 +397,17 @@ const metaPixelTemplate = createTemplate({
       return eventName + "_" + eventData.order_id;
     };
 
-    // ✅ Extract search term from your payload shape
+    // ✅ Extract search string from your payload shape
     const extractSearchString = (data) => {
       if (!data) return null;
+      if (data.search_text) return data.search_text; // your event has this
 
-      // Your payload has this:
-      if (data.search_text) return data.search_text;
-
-      // Sometimes the full suggestion exists here:
+      // fallback: from suggestions array
       try {
         const first = data.items && data.items[0];
         const qArr = first && first.action && first.action.page && first.action.page.query && first.action.page.query.q;
         if (Array.isArray(qArr) && qArr[0]) return qArr[0];
       } catch (e) {}
-
       return null;
     };
 
@@ -392,10 +415,12 @@ const metaPixelTemplate = createTemplate({
       console.log('[Meta Pixel] formatEventData:', event, data);
       const eventData = {};
 
+      // Standard e-commerce parameters
       if (data.value || data.total_amount || data.amount) {
         eventData.value = data.value || data.total_amount || data.amount;
       }
 
+      // Product data
       if (data.product) {
         eventData.content_ids = [data.product.id || data.product.uid];
         eventData.content_name = data.product.name;
@@ -411,6 +436,7 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
+      // Cart/Order data
       if (data.cart && data.cart.items) {
         eventData.content_ids = data.cart.items.map(item => item.product.id || item.product.uid);
         eventData.contents = data.cart.items.map(item => ({
@@ -421,6 +447,7 @@ const metaPixelTemplate = createTemplate({
         eventData.num_items = data.cart.items.length;
       }
 
+      // Order data
       if (data.order) {
         if (data.order.order_id) eventData.order_id = data.order.order_id;
 
@@ -441,13 +468,13 @@ const metaPixelTemplate = createTemplate({
         }
       }
 
-      // ✅ Purchase fallback
+      // ✅ Purchase fallback: order_id from thank-you URL
       if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
         const oid = getParamFromUrl("order_id");
         if (oid) eventData.order_id = oid;
       }
 
-      // ✅ Search string fix
+      // ✅ Search string fix: payload (search_text) -> URL fallback
       if (event === FPI_EVENTS.SEARCH_PRODUCTS) {
         const fromPayload = extractSearchString(data);
         const fromUrl =
@@ -463,6 +490,7 @@ const metaPixelTemplate = createTemplate({
         console.log('[Meta Pixel] resolved search_string:', eventData.search_string, 'source:', data && data.source);
       }
 
+      // User data for advanced matching
       if (data.user) {
         const userData = {};
         if (data.user.email) userData.em = data.user.email;
@@ -488,7 +516,7 @@ const metaPixelTemplate = createTemplate({
         const eventId = buildEventId(eventName, eventData);
         if (eventId) eventData.event_id = eventId;
 
-        // ✅ Decide GTM usage (only if enabled AND dataLayer exists)
+        // ✅ GTM only if enabled AND dataLayer exists; else fallback to fbq
         const shouldUseGTM = ({{useGTM}} && Array.isArray(window.dataLayer));
 
         const sendNow = (evName, evData, evId) => {
@@ -514,14 +542,8 @@ const metaPixelTemplate = createTemplate({
           console.log('Meta Pixel Event (direct):', evName, evData, evId);
         };
 
-        // ✅ Search behavior: SKIP autocomplete to avoid spam + Pixel Helper warnings
+        // ✅ Search: debounce + TTL dedupe
         if (eventName === "Search") {
-          if (data && data.source === "autocomplete") {
-            console.log('[Meta Pixel] skipping Search (autocomplete)', eventData.search_string);
-            return;
-          }
-
-          // If not autocomplete, debounce as extra safety
           scheduleSearch(sendNow, eventName, eventData, eventId);
           console.log('[Meta Pixel] Search scheduled:', eventData.search_string);
           return;
