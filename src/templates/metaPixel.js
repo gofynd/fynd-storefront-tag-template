@@ -279,6 +279,11 @@ const metaPixelTemplate = createTemplate({
 });
 
 function consumeEvent() {
+  // ✅ FIX: Ensure dataLayer exists in GTM mode (prevents "dataLayer not available")
+  if ({{useGTM}}) {
+    window.dataLayer = window.dataLayer || [];
+  }
+
   const FPI_EVENTS = {
     LOG_IN: "user.login",
     LOG_OUT: "user.logout",
@@ -486,7 +491,8 @@ function consumeEvent() {
     eventToggles: eventToggles,
     pixelId: '{{pixelId}}',
     useGTM: {{useGTM}},
-    enableConversionsApi: {{enableConversionsApi}}
+    enableConversionsApi: {{enableConversionsApi}},
+    conversionsApiPixelId: '{{conversionsApiPixelId}}'
   };
 
   console.log('[Meta Pixel] Configuration:', window.__META_PIXEL_CONFIG__);
