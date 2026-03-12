@@ -264,15 +264,13 @@ const metaPixelTemplate = createTemplate({
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
-    // ✅ Initialize pixel (fallback to conversionsApiPixelId when pixelId is blank)
+    // ✅ pixelId fallback to conversionsApiPixelId
     var __pixelId = ('{{pixelId}}' || '').trim();
     var __capiPixelId = ('{{conversionsApiPixelId}}' || '').trim();
     var __finalPixelId = __pixelId || __capiPixelId;
 
     if (__finalPixelId) {
       fbq('init', __finalPixelId);
-
-      // Track page view
       fbq('track', 'PageView');
     } else {
       console.warn('[Meta Pixel] No Pixel ID provided (pixelId and conversionsApiPixelId are empty)');
@@ -284,7 +282,7 @@ function consumeEvent() {
   const FPI_EVENTS = {
     LOG_IN: "user.login",
     LOG_OUT: "user.logout",
-    PROFILE_UPDATE: "user.update", 
+    PROFILE_UPDATE: "user.update",
     PRODUCT_LIST_VIEW: "product_list.view",
     COLLECTION_LIST_VIEW: "collection_list.view",
     PRODUCT_LIST_CLICK: "product_list.click",
@@ -326,16 +324,13 @@ function consumeEvent() {
     return META_EVENTS[event] || null;
   };
 
-  // Robust URL param getter (supports query + hash-query)
   const getParamFromUrl = (key) => {
     try {
       const url = new URL(window.location.href);
 
-      // Normal querystring: ?order_id=...
       const direct = url.searchParams.get(key);
       if (direct) return direct;
 
-      // Hash-routing cases: /#/path?order_id=...
       if (url.hash && url.hash.includes("?")) {
         const hashQuery = url.hash.split("?")[1];
         const sp = new URLSearchParams(hashQuery);
@@ -349,12 +344,10 @@ function consumeEvent() {
     }
   };
 
-  // ✅ Build event_id:
+  // ✅ event_id rules:
   // - Purchase => Purchase_<OrderID>
-  // - Search/ViewCategory/AddPaymentInfo => <EventName>_<timestamp>
+  // - Search / ViewCategory / AddPaymentInfo => <EventName>_<timestamp>
   const buildEventId = (eventName, eventData) => {
-    console.log('[Meta Pixel] buildEventId:', eventName, eventData);
-
     if (eventName === "Purchase") {
       if (!eventData || !eventData.order_id) return null;
       return eventName + "_" + eventData.order_id;
@@ -368,24 +361,23 @@ function consumeEvent() {
   };
 
   const formatEventData = (event, data) => {
-    console.log('[Meta Pixel] formatEventData:', event, data);
     const eventData = {};
-    
+
     // Standard e-commerce parameters
-    if (data.value || data.total_amount || data.amount) {
+    if (data && (data.value || data.total_amount || data.amount)) {
       eventData.value = data.value || data.total_amount || data.amount;
     }
 
     // Product data
-    if (data.product) {
+    if (data && data.product) {
       eventData.content_ids = [data.product.id || data.product.uid];
       eventData.content_name = data.product.name;
       eventData.content_type = 'product';
-      
+
       if (data.product.categories && data.product.categories.length > 0) {
         eventData.content_category = data.product.categories[0].name;
       }
-      
+
       if (data.product.price) {
         eventData.value = data.product.price.effective;
         eventData.currency = data.product.price.currency_code;
@@ -393,7 +385,7 @@ function consumeEvent() {
     }
 
     // Cart/Order data
-    if (data.cart && data.cart.items) {
+    if (data && data.cart && data.cart.items) {
       eventData.content_ids = data.cart.items.map(item => item.product.id || item.product.uid);
       eventData.contents = data.cart.items.map(item => ({
         id: item.product.id || item.product.uid,
@@ -404,11 +396,9 @@ function consumeEvent() {
     }
 
     // Order data
-    if (data.order) {
-      if (data.order.order_id) {
-        eventData.order_id = data.order.order_id;
-      }
-      
+    if (data && data.order) {
+      if (data.order.order_id) eventData.order_id = data.order.order_id;
+
       if (data.order.bags && data.order.bags.length > 0) {
         const items = data.order.bags.flatMap(bag => bag.items || []);
         eventData.content_ids = items.map(item => item.product.id || item.product.uid);
@@ -426,58 +416,83 @@ function consumeEvent() {
       }
     }
 
-    // ✅ Fallback: for order.processed, order_id is present on thank-you page URL as ?order_id=...
+    // Purchase fallback: order_id from thank-you URL
     if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
       const oid = getParamFromUrl("order_id");
-      console.log('[Meta Pixel] oid:', oid);
       if (oid) eventData.order_id = oid;
-      console.log('[Meta Pixel] eventData after oid:', eventData);
     }
 
-    // Search data
-    if (data.query || data.search_query) {
-      eventData.search_string = data.query || data.search_query;
-    } else if (data.search_text) {
-      // ✅ Your payload uses search_text
-      eventData.search_string = data.search_text;
+    // Search string (your payload uses search_text)
+    if (data) {
+      if (data.query || data.search_query) eventData.search_string = data.query || data.search_query;
+      else if (data.search_text) eventData.search_string = data.search_text;
     }
 
     // User data for advanced matching
-    if (data.user) {
+    if (data && data.user) {
       const userData = {};
       if (data.user.email) userData.em = data.user.email;
       if (data.user.phone) userData.ph = data.user.phone;
       if (data.user.first_name) userData.fn = data.user.first_name;
       if (data.user.last_name) userData.ln = data.user.last_name;
-      
-      if (Object.keys(userData).length > 0) {
-        eventData.user_data = userData;
-      }
+
+      if (Object.keys(userData).length > 0) eventData.user_data = userData;
     }
 
     return eventData;
   };
 
-  // ✅ Wrapped in try/catch to prevent silent failures
+  // ✅ Toggle gating (PIXEL)
+  const isOn = (v) => v === true || v === 'true' || v === 1 || v === '1';
+
+  const pixelEnabled = {
+    addToCart: isOn({{pixel_add_to_cart}}),
+    addToWishlist: isOn({{pixel_add_to_wishlist}}),
+    initiateCheckout: isOn({{pixel_initiate_checkout}}),
+    purchase: isOn({{pixel_purchase}}),
+    search: isOn({{pixel_search}}),
+    viewContent: isOn({{pixel_view_content}})
+  };
+
+  // Build allowed FPI events
+  const allowedFpiEvents = new Set();
+
+  if (pixelEnabled.viewContent) {
+    allowedFpiEvents.add(FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW);
+
+    // No dedicated ViewCategory toggle exists => gate under viewContent
+    allowedFpiEvents.add(FPI_EVENTS.PRODUCT_LIST_VIEW);
+    allowedFpiEvents.add(FPI_EVENTS.COLLECTION_LIST_VIEW);
+  }
+
+  if (pixelEnabled.addToCart) allowedFpiEvents.add(FPI_EVENTS.ADD_TO_CART);
+  if (pixelEnabled.addToWishlist) allowedFpiEvents.add(FPI_EVENTS.ADD_TO_WISHLIST);
+  if (pixelEnabled.initiateCheckout) {
+    allowedFpiEvents.add(FPI_EVENTS.ORDER_CHECKOUT);
+
+    // No dedicated AddPaymentInfo toggle exists => gate under initiateCheckout
+    allowedFpiEvents.add(FPI_EVENTS.ADD_PAYMENT_INFORMATION);
+  }
+  if (pixelEnabled.purchase) allowedFpiEvents.add(FPI_EVENTS.ORDER_PROCESSED);
+  if (pixelEnabled.search) allowedFpiEvents.add(FPI_EVENTS.SEARCH_PRODUCTS);
+
+  // If all toggles OFF, bind nothing
+  if (allowedFpiEvents.size === 0) {
+    console.log('[Meta Pixel] All Pixel event toggles are OFF. No listeners will be bound.');
+    return;
+  }
+
   const trackEvent = (event, data) => {
     try {
       const eventName = getMetaPixelEventName(event);
-      console.log('[Meta Pixel] trackEvent:', eventName, data);
       if (!eventName) return;
-      
+
       const eventData = formatEventData(event, data);
 
-      // ✅ event_id for Purchase + Search/ViewCategory/AddPaymentInfo
       const eventId = buildEventId(eventName, eventData);
-      console.log('[Meta Pixel] eventId:', eventId);
-      if (eventId) {
-        eventData.event_id = eventId; // keep in payload for debugging / GTM mapping
-      }
+      if (eventId) eventData.event_id = eventId;
 
-      console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
-      
       if ({{useGTM}}) {
-        // Push to GTM dataLayer
         if (window.dataLayer) {
           window.dataLayer.push({
             event: 'meta_pixel_event',
@@ -485,42 +500,24 @@ function consumeEvent() {
             fb_event_data: eventData,
             fb_event_id: eventId
           });
-          console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
-        } else {
-          console.warn('[Meta Pixel] dataLayer not available');
         }
       } else {
-        // Direct Meta Pixel tracking
-        if (!window.fbq) {
-          console.warn('[Meta Pixel] fbq not available');
-          return;
-        }
+        if (!window.fbq) return;
 
-        // ✅ pass eventID option (now for Purchase + Search + ViewCategory + AddPaymentInfo)
-        if (eventId) {
-          fbq('track', eventName, eventData, { eventID: eventId });
-        } else {
-          fbq('track', eventName, eventData);
-        }
-
-        console.log('Meta Pixel Event:', eventName, eventData, eventId);
+        if (eventId) fbq('track', eventName, eventData, { eventID: eventId });
+        else fbq('track', eventName, eventData);
       }
     } catch (e) {
       console.error('[Meta Pixel] trackEvent error:', e);
     }
   };
 
-  const getSkipEvents = () => [];
-
   if (window.FPI) {
-    Object.keys(FPI_EVENTS)
-      .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
-      .forEach(event => {
-        FPI.event.on(FPI_EVENTS[event], eventData => {
-          console.log("FPI [Meta Pixel] " + event);
-          trackEvent(FPI_EVENTS[event], eventData);
-        });
+    Array.from(allowedFpiEvents).forEach((fpiEventName) => {
+      FPI.event.on(fpiEventName, (eventData) => {
+        trackEvent(fpiEventName, eventData);
       });
+    });
   } else {
     console.warn('[Meta Pixel] window.FPI not available');
   }
