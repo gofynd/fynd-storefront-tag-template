@@ -264,17 +264,11 @@ const metaPixelTemplate = createTemplate({
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
-    // ✅ pixelId fallback to conversionsApiPixelId
-    var __pixelId = ('{{pixelId}}' || '').trim();
-    var __capiPixelId = ('{{conversionsApiPixelId}}' || '').trim();
-    var __finalPixelId = __pixelId || __capiPixelId;
+    // Initialize pixel
+    fbq('init', '{{pixelId}}');
 
-    if (__finalPixelId) {
-      fbq('init', __finalPixelId);
-      fbq('track', 'PageView');
-    } else {
-      console.warn('[Meta Pixel] No Pixel ID provided (pixelId and conversionsApiPixelId are empty)');
-    }
+    // Track page view
+    fbq('track', 'PageView');
   }
 });
 
@@ -324,13 +318,16 @@ function consumeEvent() {
     return META_EVENTS[event] || null;
   };
 
+  // Robust URL param getter (supports query + hash-query)
   const getParamFromUrl = (key) => {
     try {
       const url = new URL(window.location.href);
 
+      // Normal querystring: ?order_id=...
       const direct = url.searchParams.get(key);
       if (direct) return direct;
 
+      // Hash-routing cases: /#/path?order_id=...
       if (url.hash && url.hash.includes("?")) {
         const hashQuery = url.hash.split("?")[1];
         const sp = new URLSearchParams(hashQuery);
@@ -344,10 +341,12 @@ function consumeEvent() {
     }
   };
 
-  // ✅ event_id rules:
+  // ✅ Build event_id:
   // - Purchase => Purchase_<OrderID>
-  // - Search / ViewCategory / AddPaymentInfo => <EventName>_<timestamp>
+  // - Search   => Search_<timestamp>
   const buildEventId = (eventName, eventData) => {
+    console.log('[Meta Pixel] buildEventId:', eventName, eventData);
+
     if (eventName === "Purchase") {
       if (!eventData || !eventData.order_id) return null;
       return eventName + "_" + eventData.order_id;
@@ -361,15 +360,16 @@ function consumeEvent() {
   };
 
   const formatEventData = (event, data) => {
+    console.log('[Meta Pixel] formatEventData:', event, data);
     const eventData = {};
 
     // Standard e-commerce parameters
-    if (data && (data.value || data.total_amount || data.amount)) {
+    if (data.value || data.total_amount || data.amount) {
       eventData.value = data.value || data.total_amount || data.amount;
     }
 
     // Product data
-    if (data && data.product) {
+    if (data.product) {
       eventData.content_ids = [data.product.id || data.product.uid];
       eventData.content_name = data.product.name;
       eventData.content_type = 'product';
@@ -385,7 +385,7 @@ function consumeEvent() {
     }
 
     // Cart/Order data
-    if (data && data.cart && data.cart.items) {
+    if (data.cart && data.cart.items) {
       eventData.content_ids = data.cart.items.map(item => item.product.id || item.product.uid);
       eventData.contents = data.cart.items.map(item => ({
         id: item.product.id || item.product.uid,
@@ -396,8 +396,10 @@ function consumeEvent() {
     }
 
     // Order data
-    if (data && data.order) {
-      if (data.order.order_id) eventData.order_id = data.order.order_id;
+    if (data.order) {
+      if (data.order.order_id) {
+        eventData.order_id = data.order.order_id;
+      }
 
       if (data.order.bags && data.order.bags.length > 0) {
         const items = data.order.bags.flatMap(bag => bag.items || []);
@@ -416,83 +418,122 @@ function consumeEvent() {
       }
     }
 
-    // Purchase fallback: order_id from thank-you URL
+    // ✅ Fallback: for order.processed, order_id is present on thank-you page URL as ?order_id=...
     if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
       const oid = getParamFromUrl("order_id");
+      console.log('[Meta Pixel] oid:', oid);
       if (oid) eventData.order_id = oid;
+      console.log('[Meta Pixel] eventData after oid:', eventData);
     }
 
-    // Search string (your payload uses search_text)
-    if (data) {
-      if (data.query || data.search_query) eventData.search_string = data.query || data.search_query;
-      else if (data.search_text) eventData.search_string = data.search_text;
+    // ✅ Search data (your payload uses search_text)
+    if (data.query || data.search_query) {
+      eventData.search_string = data.query || data.search_query;
+    } else if (data.search_text) {
+      eventData.search_string = data.search_text;
     }
 
     // User data for advanced matching
-    if (data && data.user) {
+    if (data.user) {
       const userData = {};
       if (data.user.email) userData.em = data.user.email;
       if (data.user.phone) userData.ph = data.user.phone;
       if (data.user.first_name) userData.fn = data.user.first_name;
       if (data.user.last_name) userData.ln = data.user.last_name;
 
-      if (Object.keys(userData).length > 0) eventData.user_data = userData;
+      if (Object.keys(userData).length > 0) {
+        eventData.user_data = userData;
+      }
     }
 
     return eventData;
   };
 
-  // ✅ Toggle gating (PIXEL)
-  const isOn = (v) => v === true || v === 'true' || v === 1 || v === '1';
-
-  const pixelEnabled = {
-    addToCart: isOn({{pixel_add_to_cart}}),
-    addToWishlist: isOn({{pixel_add_to_wishlist}}),
-    initiateCheckout: isOn({{pixel_initiate_checkout}}),
-    purchase: isOn({{pixel_purchase}}),
-    search: isOn({{pixel_search}}),
-    viewContent: isOn({{pixel_view_content}})
+  // ✅ Helper to check if event is enabled
+  // Since we skip false values in template_fields, unreplaced placeholders mean the event is disabled
+  const isEventEnabled = (placeholderValue) => {
+    // If placeholder wasn't replaced, it will still be a string like "{{pixel_add_to_cart}}"
+    if (typeof placeholderValue === 'string' && placeholderValue.startsWith('{{') && placeholderValue.endsWith('}}')) {
+      return false; // Unreplaced placeholder = disabled event
+    }
+    // Check if value is truthy (true, 'true', 1, '1')
+    return placeholderValue === true || placeholderValue === 'true' || placeholderValue === 1 || placeholderValue === '1';
   };
 
-  // Build allowed FPI events
-  const allowedFpiEvents = new Set();
+  // ✅ Event enablement map - captures raw and processed values
+  const rawEventValues = {
+    pixel_add_to_cart: '{{pixel_add_to_cart}}',
+    pixel_add_to_wishlist: '{{pixel_add_to_wishlist}}',
+    pixel_initiate_checkout: '{{pixel_initiate_checkout}}',
+    pixel_purchase: '{{pixel_purchase}}',
+    pixel_search: '{{pixel_search}}',
+    pixel_view_content: '{{pixel_view_content}}'
+  };
 
-  if (pixelEnabled.viewContent) {
-    allowedFpiEvents.add(FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW);
+  const eventToggles = {
+    addToCart: isEventEnabled('{{pixel_add_to_cart}}'),
+    addToWishlist: isEventEnabled('{{pixel_add_to_wishlist}}'),
+    initiateCheckout: isEventEnabled('{{pixel_initiate_checkout}}'),
+    purchase: isEventEnabled('{{pixel_purchase}}'),
+    search: isEventEnabled('{{pixel_search}}'),
+    viewContent: isEventEnabled('{{pixel_view_content}}')
+  };
 
-    // No dedicated ViewCategory toggle exists => gate under viewContent
-    allowedFpiEvents.add(FPI_EVENTS.PRODUCT_LIST_VIEW);
-    allowedFpiEvents.add(FPI_EVENTS.COLLECTION_LIST_VIEW);
-  }
+  // Expose config globally for debugging
+  window.__META_PIXEL_CONFIG__ = {
+    rawValues: rawEventValues,
+    eventToggles: eventToggles,
+    pixelId: '{{pixelId}}',
+    useGTM: {{useGTM}},
+    enableConversionsApi: {{enableConversionsApi}}
+  };
 
-  if (pixelEnabled.addToCart) allowedFpiEvents.add(FPI_EVENTS.ADD_TO_CART);
-  if (pixelEnabled.addToWishlist) allowedFpiEvents.add(FPI_EVENTS.ADD_TO_WISHLIST);
-  if (pixelEnabled.initiateCheckout) {
-    allowedFpiEvents.add(FPI_EVENTS.ORDER_CHECKOUT);
+  console.log('[Meta Pixel] Configuration:', window.__META_PIXEL_CONFIG__);
+  console.log('[Meta Pixel] Event toggles:', eventToggles);
 
-    // No dedicated AddPaymentInfo toggle exists => gate under initiateCheckout
-    allowedFpiEvents.add(FPI_EVENTS.ADD_PAYMENT_INFORMATION);
-  }
-  if (pixelEnabled.purchase) allowedFpiEvents.add(FPI_EVENTS.ORDER_PROCESSED);
-  if (pixelEnabled.search) allowedFpiEvents.add(FPI_EVENTS.SEARCH_PRODUCTS);
+  // ✅ Check if a specific FPI event should be tracked
+  const isEventAllowed = (fpiEvent) => {
+    const eventMap = {
+      [FPI_EVENTS.ADD_TO_CART]: eventToggles.addToCart,
+      [FPI_EVENTS.ADD_TO_WISHLIST]: eventToggles.addToWishlist,
+      [FPI_EVENTS.ORDER_CHECKOUT]: eventToggles.initiateCheckout,
+      [FPI_EVENTS.ADD_PAYMENT_INFORMATION]: eventToggles.initiateCheckout,
+      [FPI_EVENTS.ORDER_PROCESSED]: eventToggles.purchase,
+      [FPI_EVENTS.SEARCH_PRODUCTS]: eventToggles.search,
+      [FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW]: eventToggles.viewContent,
+      [FPI_EVENTS.PRODUCT_LIST_VIEW]: eventToggles.viewContent,
+      [FPI_EVENTS.COLLECTION_LIST_VIEW]: eventToggles.viewContent
+    };
+    
+    return eventMap[fpiEvent] === true;
+  };
 
-  // If all toggles OFF, bind nothing
-  if (allowedFpiEvents.size === 0) {
-    console.log('[Meta Pixel] All Pixel event toggles are OFF. No listeners will be bound.');
-    return;
-  }
-
+  // ✅ Wrapped in try/catch to prevent silent failures
   const trackEvent = (event, data) => {
     try {
       const eventName = getMetaPixelEventName(event);
+      console.log('[Meta Pixel] trackEvent:', eventName, data);
       if (!eventName) return;
+
+      // ✅ Check if event is allowed before tracking
+      if (!isEventAllowed(event)) {
+        console.log('[Meta Pixel] Event disabled, skipping:', eventName);
+        return;
+      }
 
       const eventData = formatEventData(event, data);
 
+      // ✅ eventId for Purchase + Search
       const eventId = buildEventId(eventName, eventData);
-      if (eventId) eventData.event_id = eventId;
+      console.log('[Meta Pixel] eventId:', eventId);
+      if (eventId) {
+        eventData.event_id = eventId; // useful for debugging / GTM mapping
+      }
+
+      console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
 
       if ({{useGTM}}) {
+        // Push to GTM dataLayer
         if (window.dataLayer) {
           window.dataLayer.push({
             event: 'meta_pixel_event',
@@ -500,24 +541,59 @@ function consumeEvent() {
             fb_event_data: eventData,
             fb_event_id: eventId
           });
+          console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
+        } else {
+          console.warn('[Meta Pixel] dataLayer not available');
         }
       } else {
-        if (!window.fbq) return;
+        // Direct Meta Pixel tracking
+        if (!window.fbq) {
+          console.warn('[Meta Pixel] fbq not available');
+          return;
+        }
 
-        if (eventId) fbq('track', eventName, eventData, { eventID: eventId });
-        else fbq('track', eventName, eventData);
+        // ✅ pass eventID option (works for Purchase + Search)
+        if (eventId) {
+          fbq('track', eventName, eventData, { eventID: eventId });
+        } else {
+          fbq('track', eventName, eventData);
+        }
+
+        console.log('Meta Pixel Event:', eventName, eventData, eventId);
       }
     } catch (e) {
       console.error('[Meta Pixel] trackEvent error:', e);
     }
   };
 
+  const getSkipEvents = () => {
+    // Return list of FPI events that should be skipped based on toggles
+    const skipEvents = [];
+    if (!eventToggles.addToCart) skipEvents.push(FPI_EVENTS.ADD_TO_CART);
+    if (!eventToggles.addToWishlist) skipEvents.push(FPI_EVENTS.ADD_TO_WISHLIST);
+    if (!eventToggles.initiateCheckout) {
+      skipEvents.push(FPI_EVENTS.ORDER_CHECKOUT);
+      skipEvents.push(FPI_EVENTS.ADD_PAYMENT_INFORMATION);
+    }
+    if (!eventToggles.purchase) skipEvents.push(FPI_EVENTS.ORDER_PROCESSED);
+    if (!eventToggles.search) skipEvents.push(FPI_EVENTS.SEARCH_PRODUCTS);
+    if (!eventToggles.viewContent) {
+      skipEvents.push(FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW);
+      skipEvents.push(FPI_EVENTS.PRODUCT_LIST_VIEW);
+      skipEvents.push(FPI_EVENTS.COLLECTION_LIST_VIEW);
+    }
+    return skipEvents;
+  };
+
   if (window.FPI) {
-    Array.from(allowedFpiEvents).forEach((fpiEventName) => {
-      FPI.event.on(fpiEventName, (eventData) => {
-        trackEvent(fpiEventName, eventData);
+    Object.keys(FPI_EVENTS)
+      .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
+      .forEach(event => {
+        FPI.event.on(FPI_EVENTS[event], eventData => {
+          console.log("FPI [Meta Pixel] " + event);
+          trackEvent(FPI_EVENTS[event], eventData);
+        });
       });
-    });
   } else {
     console.warn('[Meta Pixel] window.FPI not available');
   }
