@@ -352,7 +352,7 @@ function consumeEvent() {
       return eventName + "_" + eventData.order_id;
     }
 
-    if (eventName === "Search") {
+    if (eventName === "Search" || eventName === "ViewCategory" || eventName === "AddPaymentInfo") {
       return eventName + "_" + Date.now();
     }
 
