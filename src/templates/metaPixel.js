@@ -631,6 +631,38 @@ consumeEvent();`,
     gap: '20px'
   },
   
+  // Transform formData to include mapped field names for placeholder replacement
+  transformData: function(formData) {
+    const transformed = { ...formData };
+    
+    // Map form field names to template_field keys for script placeholder replacement
+    // Form uses "pixel.addToCart", script uses "{{pixel_add_to_cart}}"
+    const fieldMappings = {
+      'pixel.addToCart': 'pixel_add_to_cart',
+      'pixel.addToWishlist': 'pixel_add_to_wishlist',
+      'pixel.initiateCheckout': 'pixel_initiate_checkout',
+      'pixel.purchase': 'pixel_purchase',
+      'pixel.search': 'pixel_search',
+      'pixel.viewContent': 'pixel_view_content',
+      'capi.addToCart': 'capi_add_to_cart',
+      'capi.addToWishlist': 'capi_add_to_wishlist',
+      'capi.initiateCheckout': 'capi_initiate_checkout',
+      'capi.purchase': 'capi_purchase',
+      'capi.search': 'capi_search',
+      'capi.viewContent': 'capi_view_content'
+    };
+    
+    // Add mapped field names to transformed data so placeholders get replaced
+    Object.keys(fieldMappings).forEach(formFieldName => {
+      const mappedFieldName = fieldMappings[formFieldName];
+      if (formData[formFieldName] !== undefined) {
+        transformed[mappedFieldName] = formData[formFieldName];
+      }
+    });
+    
+    return transformed;
+  },
+  
   // Custom validation function to check all required fields based on current configuration
   validate: function(formData) {
     const errors = {};
