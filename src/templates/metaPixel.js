@@ -264,11 +264,17 @@ const metaPixelTemplate = createTemplate({
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
-    // Initialize pixel
-    fbq('init', '{{pixelId}}');
+    var __pixelId = ('{{pixelId}}' || '').trim();
+    var __capiPixelId = ('{{conversionsApiPixelId}}' || '').trim();
+    var __finalPixelId = __pixelId || __capiPixelId;
+    if (__finalPixelId) {
+      fbq('init', __finalPixelId);
 
-    // Track page view
-    fbq('track', 'PageView');
+      // Track page view
+      fbq('track', 'PageView');
+    } else {
+      console.warn('[Meta Pixel] No Pixel ID provided (pixelId and conversionsApiPixelId are empty)');
+    }
   }
 });
 
