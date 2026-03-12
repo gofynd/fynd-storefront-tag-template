@@ -264,11 +264,17 @@ const metaPixelTemplate = createTemplate({
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
-    // Initialize pixel
-    fbq('init', '{{pixelId}}');
+    var __pixelId = ('{{pixelId}}' || '').trim();
+    var __capiPixelId = ('{{conversionsApiPixelId}}' || '').trim();
+    var __finalPixelId = __pixelId || __capiPixelId;
+    if (__finalPixelId) {
+      fbq('init', __finalPixelId);
 
-    // Track page view
-    fbq('track', 'PageView');
+      // Track page view
+      fbq('track', 'PageView');
+    } else {
+      console.warn('[Meta Pixel] No Pixel ID provided (pixelId and conversionsApiPixelId are empty)');
+    }
   }
 });
 
@@ -345,7 +351,7 @@ function consumeEvent() {
   // - Purchase => Purchase_<OrderID>
   // - Search   => Search_<timestamp>
   const buildEventId = (eventName, eventData) => {
-    console.log('[Meta Pixel] buildEventId:', eventName, eventData);
+    console.log('[Meta Pixel] buildEventId:', eventName, eventData, );
 
     if (eventName === "Purchase") {
       if (!eventData || !eventData.order_id) return null;
@@ -450,12 +456,7 @@ function consumeEvent() {
   };
 
   // ✅ Helper to check if event is enabled
-  // Since we skip false values in template_fields, unreplaced placeholders mean the event is disabled
   const isEventEnabled = (placeholderValue) => {
-    // If placeholder wasn't replaced, it will still be a string like "{{pixel_add_to_cart}}"
-    if (typeof placeholderValue === 'string' && placeholderValue.startsWith('{{') && placeholderValue.endsWith('}}')) {
-      return false; // Unreplaced placeholder = disabled event
-    }
     // Check if value is truthy (true, 'true', 1, '1')
     return placeholderValue === true || placeholderValue === 'true' || placeholderValue === 1 || placeholderValue === '1';
   };
@@ -515,7 +516,7 @@ function consumeEvent() {
       console.log('[Meta Pixel] trackEvent:', eventName, data);
       if (!eventName) return;
 
-      // ✅ Check if event is allowed before tracking
+      // ✅ Check if event is allowed before tracking (defensive check)
       if (!isEventAllowed(event)) {
         console.log('[Meta Pixel] Event disabled, skipping:', eventName);
         return;
@@ -629,38 +630,6 @@ consumeEvent();`,
   layout: {
     columns: 2,
     gap: '20px'
-  },
-  
-  // Transform formData to include mapped field names for placeholder replacement
-  transformData: function(formData) {
-    const transformed = { ...formData };
-    
-    // Map form field names to template_field keys for script placeholder replacement
-    // Form uses "pixel.addToCart", script uses "{{pixel_add_to_cart}}"
-    const fieldMappings = {
-      'pixel.addToCart': 'pixel_add_to_cart',
-      'pixel.addToWishlist': 'pixel_add_to_wishlist',
-      'pixel.initiateCheckout': 'pixel_initiate_checkout',
-      'pixel.purchase': 'pixel_purchase',
-      'pixel.search': 'pixel_search',
-      'pixel.viewContent': 'pixel_view_content',
-      'capi.addToCart': 'capi_add_to_cart',
-      'capi.addToWishlist': 'capi_add_to_wishlist',
-      'capi.initiateCheckout': 'capi_initiate_checkout',
-      'capi.purchase': 'capi_purchase',
-      'capi.search': 'capi_search',
-      'capi.viewContent': 'capi_view_content'
-    };
-    
-    // Add mapped field names to transformed data so placeholders get replaced
-    Object.keys(fieldMappings).forEach(formFieldName => {
-      const mappedFieldName = fieldMappings[formFieldName];
-      if (formData[formFieldName] !== undefined) {
-        transformed[mappedFieldName] = formData[formFieldName];
-      }
-    });
-    
-    return transformed;
   },
   
   // Custom validation function to check all required fields based on current configuration
