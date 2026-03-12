@@ -253,7 +253,7 @@ const metaPixelTemplate = createTemplate({
 
   // ✅ UPDATED SCRIPT (Purchase event_id = Purchase_<OrderID>)
   script: `window.addEventListener("load", function() {
-    if (!{{useGTM}}) {
+  if (!{{useGTM}}) {
     // Initialize Meta Pixel only if not using GTM
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -269,310 +269,255 @@ const metaPixelTemplate = createTemplate({
 
     // Track page view
     fbq('track', 'PageView');
-    }
-  });
+  }
+});
 
-  function consumeEvent() {
-    const FPI_EVENTS = {
-      LOG_IN: "user.login",
-      LOG_OUT: "user.logout",
-      PROFILE_UPDATE: "user.update",
-      PRODUCT_LIST_VIEW: "product_list.view",
-      COLLECTION_LIST_VIEW: "collection_list.view",
-      PRODUCT_LIST_CLICK: "product_list.click",
-      PRODUCT_FILTER: "product_list.filter",
-      PRODUCT_SORT: "product_list.sort",
-      PRODUCT_DETAIL_PAGE_VIEW: "product.view",
-      NOTIFY_PRODUCT: "notify.product",
-      ADD_TO_COMPARE: "compare.add",
-      REMOVE_FROM_COMPARE: "compare.remove",
-      ADD_TO_WISHLIST: "wishlist.add",
-      REMOVE_FROM_WISHLIST: "wishlist.remove",
-      VIEW_CART: "cart.view",
-      ADD_TO_CART: "cart.newProduct",
-      REMOVE_FROM_CART: "cart.remove",
-      UPDATE_CART: "cart.update",
-      ORDER_CHECKOUT: "order.checkedout",
-      ADD_PAYMENT_INFORMATION: "order.payment_information",
-      ADD_ADDRESS_INFORMATION: "order.address_information",
-      ORDER_PROCESSED: "order.processed",
-      ORDER_TRACKING_VIEW: "order_tracking.view",
-      REFUND_SUCCESS: "refund.success",
-      SEARCH_PRODUCTS: "search.products",
-      PINCODE_SERVICEABILITY: "pincode.serviceablility"
+function consumeEvent() {
+  const FPI_EVENTS = {
+    LOG_IN: "user.login",
+    LOG_OUT: "user.logout",
+    PROFILE_UPDATE: "user.update",
+    PRODUCT_LIST_VIEW: "product_list.view",
+    COLLECTION_LIST_VIEW: "collection_list.view",
+    PRODUCT_LIST_CLICK: "product_list.click",
+    PRODUCT_FILTER: "product_list.filter",
+    PRODUCT_SORT: "product_list.sort",
+    PRODUCT_DETAIL_PAGE_VIEW: "product.view",
+    NOTIFY_PRODUCT: "notify.product",
+    ADD_TO_COMPARE: "compare.add",
+    REMOVE_FROM_COMPARE: "compare.remove",
+    ADD_TO_WISHLIST: "wishlist.add",
+    REMOVE_FROM_WISHLIST: "wishlist.remove",
+    VIEW_CART: "cart.view",
+    ADD_TO_CART: "cart.newProduct",
+    REMOVE_FROM_CART: "cart.remove",
+    UPDATE_CART: "cart.update",
+    ORDER_CHECKOUT: "order.checkedout",
+    ADD_PAYMENT_INFORMATION: "order.payment_information",
+    ADD_ADDRESS_INFORMATION: "order.address_information",
+    ORDER_PROCESSED: "order.processed",
+    ORDER_TRACKING_VIEW: "order_tracking.view",
+    REFUND_SUCCESS: "refund.success",
+    SEARCH_PRODUCTS: "search.products",
+    PINCODE_SERVICEABILITY: "pincode.serviceablility"
+  };
+
+  const getMetaPixelEventName = (event) => {
+    const META_EVENTS = {
+      [FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW]: "ViewContent",
+      [FPI_EVENTS.ADD_TO_CART]: "AddToCart",
+      [FPI_EVENTS.ORDER_CHECKOUT]: "InitiateCheckout",
+      [FPI_EVENTS.ORDER_PROCESSED]: "Purchase",
+      [FPI_EVENTS.PRODUCT_LIST_VIEW]: "ViewCategory",
+      [FPI_EVENTS.COLLECTION_LIST_VIEW]: "ViewCategory",
+      [FPI_EVENTS.ADD_TO_WISHLIST]: "AddToWishlist",
+      [FPI_EVENTS.SEARCH_PRODUCTS]: "Search",
+      [FPI_EVENTS.ADD_PAYMENT_INFORMATION]: "AddPaymentInfo",
+      [FPI_EVENTS.LOG_IN]: "CompleteRegistration"
     };
+    return META_EVENTS[event] || null;
+  };
 
-    // ✅ FIX 1: Prevent multiple FPI bindings (SPA / multiple injections)
-    if (window.__META_PIXEL_FPI_BOUND__) {
-      console.log('[Meta Pixel] FPI listeners already bound, skipping re-bind');
-      return;
-    }
-    window.__META_PIXEL_FPI_BOUND__ = true;
+  // Robust URL param getter (supports query + hash-query)
+  const getParamFromUrl = (key) => {
+    try {
+      const url = new URL(window.location.href);
 
-    // ✅ FIX 2: Search debounce + TTL dedupe (prevents "fired twice" warnings)
-    let __searchTimer = null;
-    let __pendingSearch = null;
-    const SEARCH_DEBOUNCE_MS = 900; // send after user pauses typing
-    const MIN_QUERY_LEN = 2;        // ignore tiny queries
-    const SEARCH_TTL_MS = 30000;    // don't send same query again for 30s
-    const __searchSeen = {};        // { query: timestamp }
+      // Normal querystring: ?order_id=...
+      const direct = url.searchParams.get(key);
+      if (direct) return direct;
 
-    const scheduleSearch = (sendFn, eventName, eventData, eventId) => {
-      const q = (eventData && eventData.search_string) ? String(eventData.search_string).trim() : "";
-      if (!q || q.length < MIN_QUERY_LEN) return;
-
-      __pendingSearch = { eventName, eventData, eventId };
-
-      if (__searchTimer) clearTimeout(__searchTimer);
-      __searchTimer = setTimeout(() => {
-        if (!__pendingSearch) return;
-
-        const latestQ = String(__pendingSearch.eventData.search_string || "").trim();
-        const now = Date.now();
-
-        // cleanup old entries
-        Object.keys(__searchSeen).forEach(k => {
-          if (now - __searchSeen[k] > SEARCH_TTL_MS) delete __searchSeen[k];
-        });
-
-        // TTL dedupe: don't send same query repeatedly
-        if (!latestQ || latestQ.length < MIN_QUERY_LEN) {
-          __pendingSearch = null;
-          return;
-        }
-
-        if (!__searchSeen[latestQ]) {
-          __searchSeen[latestQ] = now;
-          sendFn(__pendingSearch.eventName, __pendingSearch.eventData, __pendingSearch.eventId);
-          console.log('[Meta Pixel] Search sent (debounced+ttl):', latestQ);
-        } else {
-          console.log('[Meta Pixel] Search skipped (ttl dedupe):', latestQ);
-        }
-
-        __pendingSearch = null;
-      }, SEARCH_DEBOUNCE_MS);
-    };
-
-    const getMetaPixelEventName = (event) => {
-      const META_EVENTS = {
-        [FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW]: "ViewContent",
-        [FPI_EVENTS.ADD_TO_CART]: "AddToCart",
-        [FPI_EVENTS.ORDER_CHECKOUT]: "InitiateCheckout",
-        [FPI_EVENTS.ORDER_PROCESSED]: "Purchase",
-        [FPI_EVENTS.PRODUCT_LIST_VIEW]: "ViewCategory",
-        [FPI_EVENTS.COLLECTION_LIST_VIEW]: "ViewCategory",
-        [FPI_EVENTS.ADD_TO_WISHLIST]: "AddToWishlist",
-        [FPI_EVENTS.SEARCH_PRODUCTS]: "Search",
-        [FPI_EVENTS.ADD_PAYMENT_INFORMATION]: "AddPaymentInfo",
-        [FPI_EVENTS.LOG_IN]: "CompleteRegistration"
-      };
-      return META_EVENTS[event] || null;
-    };
-
-    // Robust URL param getter (supports query + hash-query)
-    const getParamFromUrl = (key) => {
-      try {
-        const url = new URL(window.location.href);
-
-        const direct = url.searchParams.get(key);
-        if (direct) return direct;
-
-        if (url.hash && url.hash.includes("?")) {
-          const hashQuery = url.hash.split("?")[1];
-          const sp = new URLSearchParams(hashQuery);
-          const fromHash = sp.get(key);
-          if (fromHash) return fromHash;
-        }
-
-        return null;
-      } catch (e) {
-        return null;
+      // Hash-routing cases: /#/path?order_id=...
+      if (url.hash && url.hash.includes("?")) {
+        const hashQuery = url.hash.split("?")[1];
+        const sp = new URLSearchParams(hashQuery);
+        const fromHash = sp.get(key);
+        if (fromHash) return fromHash;
       }
-    };
 
-    // ✅ Purchase event_id: Purchase_<OrderID>
-    const buildEventId = (eventName, eventData) => {
-      if (eventName !== "Purchase") return null;
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // ✅ Build event_id:
+  // - Purchase => Purchase_<OrderID>
+  // - Search   => Search_<timestamp>
+  const buildEventId = (eventName, eventData) => {
+    console.log('[Meta Pixel] buildEventId:', eventName, eventData);
+
+    if (eventName === "Purchase") {
       if (!eventData || !eventData.order_id) return null;
       return eventName + "_" + eventData.order_id;
-    };
+    }
 
-    // ✅ Extract search string from your payload shape
-    const extractSearchString = (data) => {
-      if (!data) return null;
-      if (data.search_text) return data.search_text; // your event has this
+    if (eventName === "Search") {
+      return eventName + "_" + Date.now();
+    }
 
-      // fallback: from suggestions array
-      try {
-        const first = data.items && data.items[0];
-        const qArr = first && first.action && first.action.page && first.action.page.query && first.action.page.query.q;
-        if (Array.isArray(qArr) && qArr[0]) return qArr[0];
-      } catch (e) {}
-      return null;
-    };
+    return null;
+  };
 
-    const formatEventData = (event, data) => {
-      console.log('[Meta Pixel] formatEventData:', event, data);
-      const eventData = {};
+  const formatEventData = (event, data) => {
+    console.log('[Meta Pixel] formatEventData:', event, data);
+    const eventData = {};
 
-      // Standard e-commerce parameters
-      if (data.value || data.total_amount || data.amount) {
-        eventData.value = data.value || data.total_amount || data.amount;
+    // Standard e-commerce parameters
+    if (data.value || data.total_amount || data.amount) {
+      eventData.value = data.value || data.total_amount || data.amount;
+    }
+
+    // Product data
+    if (data.product) {
+      eventData.content_ids = [data.product.id || data.product.uid];
+      eventData.content_name = data.product.name;
+      eventData.content_type = 'product';
+
+      if (data.product.categories && data.product.categories.length > 0) {
+        eventData.content_category = data.product.categories[0].name;
       }
 
-      // Product data
-      if (data.product) {
-        eventData.content_ids = [data.product.id || data.product.uid];
-        eventData.content_name = data.product.name;
-        eventData.content_type = 'product';
+      if (data.product.price) {
+        eventData.value = data.product.price.effective;
+        eventData.currency = data.product.price.currency_code;
+      }
+    }
 
-        if (data.product.categories && data.product.categories.length > 0) {
-          eventData.content_category = data.product.categories[0].name;
-        }
+    // Cart/Order data
+    if (data.cart && data.cart.items) {
+      eventData.content_ids = data.cart.items.map(item => item.product.id || item.product.uid);
+      eventData.contents = data.cart.items.map(item => ({
+        id: item.product.id || item.product.uid,
+        quantity: item.quantity || 1,
+        item_price: item.product.price ? item.product.price.effective : undefined
+      }));
+      eventData.num_items = data.cart.items.length;
+    }
 
-        if (data.product.price) {
-          eventData.value = data.product.price.effective;
-          eventData.currency = data.product.price.currency_code;
-        }
+    // Order data
+    if (data.order) {
+      if (data.order.order_id) {
+        eventData.order_id = data.order.order_id;
       }
 
-      // Cart/Order data
-      if (data.cart && data.cart.items) {
-        eventData.content_ids = data.cart.items.map(item => item.product.id || item.product.uid);
-        eventData.contents = data.cart.items.map(item => ({
+      if (data.order.bags && data.order.bags.length > 0) {
+        const items = data.order.bags.flatMap(bag => bag.items || []);
+        eventData.content_ids = items.map(item => item.product.id || item.product.uid);
+        eventData.contents = items.map(item => ({
           id: item.product.id || item.product.uid,
           quantity: item.quantity || 1,
           item_price: item.product.price ? item.product.price.effective : undefined
         }));
-        eventData.num_items = data.cart.items.length;
+        eventData.num_items = items.length;
       }
 
-      // Order data
-      if (data.order) {
-        if (data.order.order_id) eventData.order_id = data.order.order_id;
+      if (data.order.total_details) {
+        eventData.value = data.order.total_details.total;
+        eventData.currency = data.order.total_details.currency;
+      }
+    }
 
-        if (data.order.bags && data.order.bags.length > 0) {
-          const items = data.order.bags.flatMap(bag => bag.items || []);
-          eventData.content_ids = items.map(item => item.product.id || item.product.uid);
-          eventData.contents = items.map(item => ({
-            id: item.product.id || item.product.uid,
-            quantity: item.quantity || 1,
-            item_price: item.product.price ? item.product.price.effective : undefined
-          }));
-          eventData.num_items = items.length;
+    // ✅ Fallback: for order.processed, order_id is present on thank-you page URL as ?order_id=...
+    if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
+      const oid = getParamFromUrl("order_id");
+      console.log('[Meta Pixel] oid:', oid);
+      if (oid) eventData.order_id = oid;
+      console.log('[Meta Pixel] eventData after oid:', eventData);
+    }
+
+    // ✅ Search data (your payload uses search_text)
+    if (data.query || data.search_query) {
+      eventData.search_string = data.query || data.search_query;
+    } else if (data.search_text) {
+      eventData.search_string = data.search_text;
+    }
+
+    // User data for advanced matching
+    if (data.user) {
+      const userData = {};
+      if (data.user.email) userData.em = data.user.email;
+      if (data.user.phone) userData.ph = data.user.phone;
+      if (data.user.first_name) userData.fn = data.user.first_name;
+      if (data.user.last_name) userData.ln = data.user.last_name;
+
+      if (Object.keys(userData).length > 0) {
+        eventData.user_data = userData;
+      }
+    }
+
+    return eventData;
+  };
+
+  // ✅ Wrapped in try/catch to prevent silent failures
+  const trackEvent = (event, data) => {
+    try {
+      const eventName = getMetaPixelEventName(event);
+      console.log('[Meta Pixel] trackEvent:', eventName, data);
+      if (!eventName) return;
+
+      const eventData = formatEventData(event, data);
+
+      // ✅ eventId for Purchase + Search
+      const eventId = buildEventId(eventName, eventData);
+      console.log('[Meta Pixel] eventId:', eventId);
+      if (eventId) {
+        eventData.event_id = eventId; // useful for debugging / GTM mapping
+      }
+
+      console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
+
+      if ({{useGTM}}) {
+        // Push to GTM dataLayer
+        if (window.dataLayer) {
+          window.dataLayer.push({
+            event: 'meta_pixel_event',
+            fb_event_name: eventName,
+            fb_event_data: eventData,
+            fb_event_id: eventId
+          });
+          console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
+        } else {
+          console.warn('[Meta Pixel] dataLayer not available');
         }
-
-        if (data.order.total_details) {
-          eventData.value = data.order.total_details.total;
-          eventData.currency = data.order.total_details.currency;
-        }
-      }
-
-      // ✅ Purchase fallback: order_id from thank-you URL
-      if (event === FPI_EVENTS.ORDER_PROCESSED && !eventData.order_id) {
-        const oid = getParamFromUrl("order_id");
-        if (oid) eventData.order_id = oid;
-      }
-
-      // ✅ Search string fix: payload (search_text) -> URL fallback
-      if (event === FPI_EVENTS.SEARCH_PRODUCTS) {
-        const fromPayload = extractSearchString(data);
-        const fromUrl =
-          getParamFromUrl("q") ||
-          getParamFromUrl("query") ||
-          getParamFromUrl("search") ||
-          getParamFromUrl("term") ||
-          getParamFromUrl("text");
-
-        const q = fromPayload || fromUrl;
-        if (q) eventData.search_string = String(q);
-
-        console.log('[Meta Pixel] resolved search_string:', eventData.search_string, 'source:', data && data.source);
-      }
-
-      // User data for advanced matching
-      if (data.user) {
-        const userData = {};
-        if (data.user.email) userData.em = data.user.email;
-        if (data.user.phone) userData.ph = data.user.phone;
-        if (data.user.first_name) userData.fn = data.user.first_name;
-        if (data.user.last_name) userData.ln = data.user.last_name;
-
-        if (Object.keys(userData).length > 0) {
-          eventData.user_data = userData;
-        }
-      }
-
-      return eventData;
-    };
-
-    const trackEvent = (event, data) => {
-      try {
-        const eventName = getMetaPixelEventName(event);
-        console.log('[Meta Pixel] trackEvent:', eventName, data);
-        if (!eventName) return;
-
-        const eventData = formatEventData(event, data);
-        const eventId = buildEventId(eventName, eventData);
-        if (eventId) eventData.event_id = eventId;
-
-        // ✅ GTM only if enabled AND dataLayer exists; else fallback to fbq
-        const shouldUseGTM = ({{useGTM}} && Array.isArray(window.dataLayer));
-
-        const sendNow = (evName, evData, evId) => {
-          if (shouldUseGTM) {
-            window.dataLayer.push({
-              event: 'meta_pixel_event',
-              fb_event_name: evName,
-              fb_event_data: evData,
-              fb_event_id: evId
-            });
-            console.log('Meta Pixel Event (via GTM):', evName, evData, evId);
-            return;
-          }
-
-          if (!window.fbq) {
-            console.warn('[Meta Pixel] fbq not available');
-            return;
-          }
-
-          if (evId) fbq('track', evName, evData, { eventID: evId });
-          else fbq('track', evName, evData);
-
-          console.log('Meta Pixel Event (direct):', evName, evData, evId);
-        };
-
-        // ✅ Search: debounce + TTL dedupe
-        if (eventName === "Search") {
-          scheduleSearch(sendNow, eventName, eventData, eventId);
-          console.log('[Meta Pixel] Search scheduled:', eventData.search_string);
+      } else {
+        // Direct Meta Pixel tracking
+        if (!window.fbq) {
+          console.warn('[Meta Pixel] fbq not available');
           return;
         }
 
-        // Other events: send immediately
-        sendNow(eventName, eventData, eventId);
-      } catch (e) {
-        console.error('[Meta Pixel] trackEvent error:', e);
+        // ✅ pass eventID option (works for Purchase + Search)
+        if (eventId) {
+          fbq('track', eventName, eventData, { eventID: eventId });
+        } else {
+          fbq('track', eventName, eventData);
+        }
+
+        console.log('Meta Pixel Event:', eventName, eventData, eventId);
       }
-    };
-
-    const getSkipEvents = () => [];
-
-    if (window.FPI) {
-      Object.keys(FPI_EVENTS)
-        .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
-        .forEach(event => {
-          FPI.event.on(FPI_EVENTS[event], eventData => {
-            console.log("FPI [Meta Pixel] " + event);
-            trackEvent(FPI_EVENTS[event], eventData);
-          });
-        });
-    } else {
-      console.warn('[Meta Pixel] window.FPI not available');
+    } catch (e) {
+      console.error('[Meta Pixel] trackEvent error:', e);
     }
-  }
+  };
 
-  consumeEvent();`,
+  const getSkipEvents = () => [];
+
+  if (window.FPI) {
+    Object.keys(FPI_EVENTS)
+      .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
+      .forEach(event => {
+        FPI.event.on(FPI_EVENTS[event], eventData => {
+          console.log("FPI [Meta Pixel] " + event);
+          trackEvent(FPI_EVENTS[event], eventData);
+        });
+      });
+  } else {
+    console.warn('[Meta Pixel] window.FPI not available');
+  }
+}
+
+consumeEvent();`,
 
   // Optional keys
   image: "https://cdn.fynd.com/v2/falling-surf-7c8bb8/fyndnp/wrkr/x5/misc/pictures/free-icon/original/PSpnazzPe-ezl6UPQ-U-logo.png",
