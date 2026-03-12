@@ -264,9 +264,11 @@ const metaPixelTemplate = createTemplate({
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
 
+    // ✅ Initialize pixel (fallback to conversionsApiPixelId when pixelId is blank)
     var __pixelId = ('{{pixelId}}' || '').trim();
     var __capiPixelId = ('{{conversionsApiPixelId}}' || '').trim();
     var __finalPixelId = __pixelId || __capiPixelId;
+
     if (__finalPixelId) {
       fbq('init', __finalPixelId);
 
@@ -282,7 +284,7 @@ function consumeEvent() {
   const FPI_EVENTS = {
     LOG_IN: "user.login",
     LOG_OUT: "user.logout",
-    PROFILE_UPDATE: "user.update",
+    PROFILE_UPDATE: "user.update", 
     PRODUCT_LIST_VIEW: "product_list.view",
     COLLECTION_LIST_VIEW: "collection_list.view",
     PRODUCT_LIST_CLICK: "product_list.click",
@@ -349,7 +351,7 @@ function consumeEvent() {
 
   // ✅ Build event_id:
   // - Purchase => Purchase_<OrderID>
-  // - Search   => Search_<timestamp>
+  // - Search/ViewCategory/AddPaymentInfo => <EventName>_<timestamp>
   const buildEventId = (eventName, eventData) => {
     console.log('[Meta Pixel] buildEventId:', eventName, eventData);
 
@@ -368,7 +370,7 @@ function consumeEvent() {
   const formatEventData = (event, data) => {
     console.log('[Meta Pixel] formatEventData:', event, data);
     const eventData = {};
-
+    
     // Standard e-commerce parameters
     if (data.value || data.total_amount || data.amount) {
       eventData.value = data.value || data.total_amount || data.amount;
@@ -379,11 +381,11 @@ function consumeEvent() {
       eventData.content_ids = [data.product.id || data.product.uid];
       eventData.content_name = data.product.name;
       eventData.content_type = 'product';
-
+      
       if (data.product.categories && data.product.categories.length > 0) {
         eventData.content_category = data.product.categories[0].name;
       }
-
+      
       if (data.product.price) {
         eventData.value = data.product.price.effective;
         eventData.currency = data.product.price.currency_code;
@@ -406,7 +408,7 @@ function consumeEvent() {
       if (data.order.order_id) {
         eventData.order_id = data.order.order_id;
       }
-
+      
       if (data.order.bags && data.order.bags.length > 0) {
         const items = data.order.bags.flatMap(bag => bag.items || []);
         eventData.content_ids = items.map(item => item.product.id || item.product.uid);
@@ -432,10 +434,11 @@ function consumeEvent() {
       console.log('[Meta Pixel] eventData after oid:', eventData);
     }
 
-    // ✅ Search data (your payload uses search_text)
+    // Search data
     if (data.query || data.search_query) {
       eventData.search_string = data.query || data.search_query;
     } else if (data.search_text) {
+      // ✅ Your payload uses search_text
       eventData.search_string = data.search_text;
     }
 
@@ -446,7 +449,7 @@ function consumeEvent() {
       if (data.user.phone) userData.ph = data.user.phone;
       if (data.user.first_name) userData.fn = data.user.first_name;
       if (data.user.last_name) userData.ln = data.user.last_name;
-
+      
       if (Object.keys(userData).length > 0) {
         eventData.user_data = userData;
       }
@@ -461,18 +464,18 @@ function consumeEvent() {
       const eventName = getMetaPixelEventName(event);
       console.log('[Meta Pixel] trackEvent:', eventName, data);
       if (!eventName) return;
-
+      
       const eventData = formatEventData(event, data);
 
-      // ✅ eventId for Purchase + Search
+      // ✅ event_id for Purchase + Search/ViewCategory/AddPaymentInfo
       const eventId = buildEventId(eventName, eventData);
       console.log('[Meta Pixel] eventId:', eventId);
       if (eventId) {
-        eventData.event_id = eventId; // useful for debugging / GTM mapping
+        eventData.event_id = eventId; // keep in payload for debugging / GTM mapping
       }
 
       console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
-
+      
       if ({{useGTM}}) {
         // Push to GTM dataLayer
         if (window.dataLayer) {
@@ -493,7 +496,7 @@ function consumeEvent() {
           return;
         }
 
-        // ✅ pass eventID option (works for Purchase + Search)
+        // ✅ pass eventID option (now for Purchase + Search + ViewCategory + AddPaymentInfo)
         if (eventId) {
           fbq('track', eventName, eventData, { eventID: eventId });
         } else {
