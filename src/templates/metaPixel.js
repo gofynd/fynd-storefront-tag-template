@@ -601,12 +601,6 @@ function consumeEvent() {
       console.log('[Meta Pixel] trackEvent:', eventName, data);
       if (!eventName) return;
 
-      // ✅ Check if event is allowed before tracking (defensive check)
-      if (!isEventAllowed(event)) {
-        console.log('[Meta Pixel] Event disabled, skipping:', eventName);
-        return;
-      }
-
       const eventData = formatEventData(event, data);
 
       // ✅ eventId for Purchase + Search
@@ -618,34 +612,77 @@ function consumeEvent() {
 
       console.log('[Meta Pixel] eventData:', eventData, 'eventId:', eventId);
 
-      if ({{useGTM}}) {
-        // Push to GTM dataLayer
+      // Get pixel IDs
+      const pixelId = ('{{pixelId}}' || '').trim();
+      const conversionsApiPixelId = ('{{conversionsApiPixelId}}' || '').trim();
+
+      // Track via Pixel (client-side) if pixelId is available AND event is enabled
+      const shouldTrackPixel = pixelId && isEventAllowed(event);
+      // Track via CAPI (server-side) if conversionsApiPixelId is available AND CAPI event is enabled
+      const shouldTrackCapi = conversionsApiPixelId && isCapiEventAllowed(event);
+
+      console.log('[Meta Pixel] Tracking decision:', {
+        shouldTrackPixel,
+        shouldTrackCapi,
+        pixelId: pixelId ? 'present' : 'missing',
+        conversionsApiPixelId: conversionsApiPixelId ? 'present' : 'missing',
+        isPixelEventEnabled: isEventAllowed(event),
+        isCapiEventEnabled: isCapiEventAllowed(event)
+      });
+
+      // If neither Pixel nor CAPI should track, skip the event
+      if (!shouldTrackPixel && !shouldTrackCapi) {
+        console.log('[Meta Pixel] Event disabled for both Pixel and CAPI, skipping:', eventName);
+        return;
+      }
+
+      // === Track via Pixel (client-side) ===
+      if (shouldTrackPixel) {
+        if ({{useGTM}}) {
+          // Push to GTM dataLayer
+          if (window.dataLayer) {
+            window.dataLayer.push({
+              event: 'meta_pixel_event',
+              fb_event_name: eventName,
+              fb_event_data: eventData,
+              fb_event_id: eventId
+            });
+            console.log('[Meta Pixel] Event sent to GTM:', eventName, eventData, eventId);
+          } else {
+            console.warn('[Meta Pixel] dataLayer not available');
+          }
+        } else {
+          // Direct Meta Pixel tracking
+          if (!window.fbq) {
+            console.warn('[Meta Pixel] fbq not available');
+          } else {
+            // ✅ pass eventID option (works for Purchase + Search)
+            if (eventId) {
+              fbq('track', eventName, eventData, { eventID: eventId });
+            } else {
+              fbq('track', eventName, eventData);
+            }
+            console.log('[Meta Pixel] Event tracked via fbq:', eventName, eventData, eventId);
+          }
+        }
+      }
+
+      // === Track via CAPI (server-side) ===
+      if (shouldTrackCapi && {{enableConversionsApi}}) {
+        // Push CAPI event to dataLayer or custom endpoint
+        // This will be picked up by server-side logic or GTM Server Container
         if (window.dataLayer) {
           window.dataLayer.push({
-            event: 'meta_pixel_event',
+            event: 'meta_capi_event',
             fb_event_name: eventName,
             fb_event_data: eventData,
-            fb_event_id: eventId
+            fb_event_id: eventId,
+            fb_pixel_id: conversionsApiPixelId
           });
-          console.log('Meta Pixel Event (via GTM):', eventName, eventData, eventId);
+          console.log('[Meta Pixel] CAPI Event sent to dataLayer:', eventName, eventData, eventId);
         } else {
-          console.warn('[Meta Pixel] dataLayer not available');
+          console.warn('[Meta Pixel] dataLayer not available for CAPI event');
         }
-      } else {
-        // Direct Meta Pixel tracking
-        if (!window.fbq) {
-          console.warn('[Meta Pixel] fbq not available');
-          return;
-        }
-
-        // ✅ pass eventID option (works for Purchase + Search)
-        if (eventId) {
-          fbq('track', eventName, eventData, { eventID: eventId });
-        } else {
-          fbq('track', eventName, eventData);
-        }
-
-        console.log('Meta Pixel Event:', eventName, eventData, eventId);
       }
     } catch (e) {
       console.error('[Meta Pixel] trackEvent error:', e);
