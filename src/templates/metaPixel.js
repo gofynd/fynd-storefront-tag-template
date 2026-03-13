@@ -674,11 +674,10 @@ function consumeEvent() {
         // This will be picked up by server-side logic or GTM Server Container
         if (window.dataLayer) {
           window.dataLayer.push({
-            event: 'meta_capi_event',
+            event: 'meta_pixel_event',
             fb_event_name: eventName,
             fb_event_data: eventData,
-            fb_event_id: eventId,
-            fb_pixel_id: conversionsApiPixelId
+            fb_event_id: eventId
           });
           console.log('[Meta Pixel] CAPI Event sent to dataLayer:', eventName, eventData, eventId);
         } else {
