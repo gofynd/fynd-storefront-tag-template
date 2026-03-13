@@ -279,8 +279,9 @@ const metaPixelTemplate = createTemplate({
 });
 
 function consumeEvent() {
-  // ✅ FIX: Ensure dataLayer exists in GTM mode (prevents "dataLayer not available")
-  if ({{useGTM}}) {
+  // ✅ FIX: Ensure dataLayer exists for GTM or CAPI (prevents "dataLayer not available")
+  // GTM needs dataLayer for Pixel events, CAPI needs dataLayer for server-side events
+  if ({{useGTM}} || {{enableConversionsApi}}) {
     window.dataLayer = window.dataLayer || [];
   }
 
