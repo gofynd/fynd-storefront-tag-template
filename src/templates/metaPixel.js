@@ -473,7 +473,13 @@ function consumeEvent() {
     pixel_initiate_checkout: '{{pixel_initiate_checkout}}',
     pixel_purchase: '{{pixel_purchase}}',
     pixel_search: '{{pixel_search}}',
-    pixel_view_content: '{{pixel_view_content}}'
+    pixel_view_content: '{{pixel_view_content}}',
+    capi_add_to_cart: '{{capi_add_to_cart}}',
+    capi_add_to_wishlist: '{{capi_add_to_wishlist}}',
+    capi_initiate_checkout: '{{capi_initiate_checkout}}',
+    capi_purchase: '{{capi_purchase}}',
+    capi_search: '{{capi_search}}',
+    capi_view_content: '{{capi_view_content}}'
   };
 
   const eventToggles = {
@@ -485,20 +491,54 @@ function consumeEvent() {
     viewContent: isEventEnabled('{{pixel_view_content}}')
   };
 
-  // Expose config globally for debugging
-  window.__META_PIXEL_CONFIG__ = {
-    rawValues: rawEventValues,
-    eventToggles: eventToggles,
-    pixelId: '{{pixelId}}',
-    useGTM: {{useGTM}},
-    enableConversionsApi: {{enableConversionsApi}},
-    conversionsApiPixelId: '{{conversionsApiPixelId}}'
+  const capiEventToggles = {
+    addToCart: isEventEnabled('{{capi_add_to_cart}}'),
+    addToWishlist: isEventEnabled('{{capi_add_to_wishlist}}'),
+    initiateCheckout: isEventEnabled('{{capi_initiate_checkout}}'),
+    purchase: isEventEnabled('{{capi_purchase}}'),
+    search: isEventEnabled('{{capi_search}}'),
+    viewContent: isEventEnabled('{{capi_view_content}}')
   };
 
-  console.log('[Meta Pixel] Configuration:', window.__META_PIXEL_CONFIG__);
-  console.log('[Meta Pixel] Event toggles:', eventToggles);
+  const getSkipEvents = () => {
+    // Return list of FPI events that should be skipped based on Pixel event toggles
+    const skipEvents = [];
+    if (!eventToggles.addToCart) skipEvents.push(FPI_EVENTS.ADD_TO_CART);
+    if (!eventToggles.addToWishlist) skipEvents.push(FPI_EVENTS.ADD_TO_WISHLIST);
+    if (!eventToggles.initiateCheckout) {
+      skipEvents.push(FPI_EVENTS.ORDER_CHECKOUT);
+      skipEvents.push(FPI_EVENTS.ADD_PAYMENT_INFORMATION);
+    }
+    if (!eventToggles.purchase) skipEvents.push(FPI_EVENTS.ORDER_PROCESSED);
+    if (!eventToggles.search) skipEvents.push(FPI_EVENTS.SEARCH_PRODUCTS);
+    if (!eventToggles.viewContent) {
+      skipEvents.push(FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW);
+      skipEvents.push(FPI_EVENTS.PRODUCT_LIST_VIEW);
+      skipEvents.push(FPI_EVENTS.COLLECTION_LIST_VIEW);
+    }
+    return skipEvents;
+  };
 
-  // ✅ Check if a specific FPI event should be tracked
+  const getSkipCapiEvents = () => {
+    // Return list of FPI events that should be skipped based on CAPI event toggles
+    const skipCapiEvents = [];
+    if (!capiEventToggles.addToCart) skipCapiEvents.push(FPI_EVENTS.ADD_TO_CART);
+    if (!capiEventToggles.addToWishlist) skipCapiEvents.push(FPI_EVENTS.ADD_TO_WISHLIST);
+    if (!capiEventToggles.initiateCheckout) {
+      skipCapiEvents.push(FPI_EVENTS.ORDER_CHECKOUT);
+      skipCapiEvents.push(FPI_EVENTS.ADD_PAYMENT_INFORMATION);
+    }
+    if (!capiEventToggles.purchase) skipCapiEvents.push(FPI_EVENTS.ORDER_PROCESSED);
+    if (!capiEventToggles.search) skipCapiEvents.push(FPI_EVENTS.SEARCH_PRODUCTS);
+    if (!capiEventToggles.viewContent) {
+      skipCapiEvents.push(FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW);
+      skipCapiEvents.push(FPI_EVENTS.PRODUCT_LIST_VIEW);
+      skipCapiEvents.push(FPI_EVENTS.COLLECTION_LIST_VIEW);
+    }
+    return skipCapiEvents;
+  };
+
+  // ✅ Check if a specific FPI event should be tracked via Pixel
   const isEventAllowed = (fpiEvent) => {
     const eventMap = {
       [FPI_EVENTS.ADD_TO_CART]: eventToggles.addToCart,
@@ -514,6 +554,45 @@ function consumeEvent() {
     
     return eventMap[fpiEvent] === true;
   };
+
+  // ✅ Check if a specific FPI event should be tracked via CAPI
+  const isCapiEventAllowed = (fpiEvent) => {
+    const eventMap = {
+      [FPI_EVENTS.ADD_TO_CART]: capiEventToggles.addToCart,
+      [FPI_EVENTS.ADD_TO_WISHLIST]: capiEventToggles.addToWishlist,
+      [FPI_EVENTS.ORDER_CHECKOUT]: capiEventToggles.initiateCheckout,
+      [FPI_EVENTS.ADD_PAYMENT_INFORMATION]: capiEventToggles.initiateCheckout,
+      [FPI_EVENTS.ORDER_PROCESSED]: capiEventToggles.purchase,
+      [FPI_EVENTS.SEARCH_PRODUCTS]: capiEventToggles.search,
+      [FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW]: capiEventToggles.viewContent,
+      [FPI_EVENTS.PRODUCT_LIST_VIEW]: capiEventToggles.viewContent,
+      [FPI_EVENTS.COLLECTION_LIST_VIEW]: capiEventToggles.viewContent
+    };
+    
+    return eventMap[fpiEvent] === true;
+  };
+
+  // Expose config globally for debugging
+  window.__META_PIXEL_CONFIG__ = {
+    rawValues: rawEventValues,
+    eventToggles: eventToggles,
+    capiEventToggles: capiEventToggles,
+    skipPixelEvents: getSkipEvents(),
+    skipCapiEvents: getSkipCapiEvents(),
+    pixelId: '{{pixelId}}',
+    useGTM: {{useGTM}},
+    enableConversionsApi: {{enableConversionsApi}},
+    conversionsApiPixelId: '{{conversionsApiPixelId}}',
+    // Helper functions for checking if events are allowed
+    isEventAllowed: isEventAllowed,
+    isCapiEventAllowed: isCapiEventAllowed
+  };
+
+  console.log('[Meta Pixel] Configuration:', window.__META_PIXEL_CONFIG__);
+  console.log('[Meta Pixel] Pixel Event toggles:', eventToggles);
+  console.log('[Meta Pixel] CAPI Event toggles:', capiEventToggles);
+  console.log('[Meta Pixel] Skip Pixel Events:', getSkipEvents());
+  console.log('[Meta Pixel] Skip CAPI Events:', getSkipCapiEvents());
 
   // ✅ Wrapped in try/catch to prevent silent failures
   const trackEvent = (event, data) => {
@@ -573,28 +652,19 @@ function consumeEvent() {
     }
   };
 
-  const getSkipEvents = () => {
-    // Return list of FPI events that should be skipped based on toggles
-    const skipEvents = [];
-    if (!eventToggles.addToCart) skipEvents.push(FPI_EVENTS.ADD_TO_CART);
-    if (!eventToggles.addToWishlist) skipEvents.push(FPI_EVENTS.ADD_TO_WISHLIST);
-    if (!eventToggles.initiateCheckout) {
-      skipEvents.push(FPI_EVENTS.ORDER_CHECKOUT);
-      skipEvents.push(FPI_EVENTS.ADD_PAYMENT_INFORMATION);
-    }
-    if (!eventToggles.purchase) skipEvents.push(FPI_EVENTS.ORDER_PROCESSED);
-    if (!eventToggles.search) skipEvents.push(FPI_EVENTS.SEARCH_PRODUCTS);
-    if (!eventToggles.viewContent) {
-      skipEvents.push(FPI_EVENTS.PRODUCT_DETAIL_PAGE_VIEW);
-      skipEvents.push(FPI_EVENTS.PRODUCT_LIST_VIEW);
-      skipEvents.push(FPI_EVENTS.COLLECTION_LIST_VIEW);
-    }
-    return skipEvents;
-  };
-
   if (window.FPI) {
+    const skipPixelEvents = getSkipEvents();
+    const skipCapiEvents = getSkipCapiEvents();
+    
+    // Register FPI listeners for events that are enabled in EITHER Pixel OR CAPI
     Object.keys(FPI_EVENTS)
-      .filter(ev => !getSkipEvents().includes(FPI_EVENTS[ev]))
+      .filter(ev => {
+        const fpiEvent = FPI_EVENTS[ev];
+        // Include event if it's enabled in Pixel OR CAPI (not skipped by both)
+        const isEnabledInPixel = !skipPixelEvents.includes(fpiEvent);
+        const isEnabledInCapi = !skipCapiEvents.includes(fpiEvent);
+        return isEnabledInPixel || isEnabledInCapi;
+      })
       .forEach(event => {
         FPI.event.on(FPI_EVENTS[event], eventData => {
           console.log("FPI [Meta Pixel] " + event);
