@@ -95,6 +95,7 @@ const gtmTemplate = createTemplate({
   });
 
   const consumeGtmEvent = () => {
+    const CURRENCY = '{{currency}}' || 'INR';
     const FPI_EVENTS = {
       // USER
       LOG_IN: 'user.login',
@@ -209,7 +210,7 @@ const gtmTemplate = createTemplate({
           payload.items = [{
             'item_id': item.uid,
             'item_name': item.name,
-            'currency': "INR",
+            'currency': CURRENCY,
             'discount': item.discount,
             'item_brand': item.brand ? item.brand.name : '',
             'item_category': item_category,
@@ -228,7 +229,7 @@ const gtmTemplate = createTemplate({
           payload.items = [{
             'item_id': item.uid,
             'item_name': item.name,
-            'currency': "INR",
+            'currency': CURRENCY,
             'discount': item.discount,
             'item_brand': item.brand ? item.brand.name : '',
             'item_category': item_category,
@@ -255,7 +256,7 @@ const gtmTemplate = createTemplate({
             'item_category': item_category,
             'price': product.price ? (product.price.max || product.price.effective || product.price.marked || '') : '',
             'quantity': 1,
-            'currency': 'INR'
+            'currency': CURRENCY
           }];
           break;
         }
@@ -271,7 +272,7 @@ const gtmTemplate = createTemplate({
             let objectToBePushed = {
               'item_id': item.item_code ? item.item_code : '',
               'item_name': item.name ? item.name : '',
-              'currency': 'INR',
+              'currency': CURRENCY,
               'discount': item.discount ? item.discount : '',
               'item_brand': item.brand && item.brand.name ? item.brand.name : '',
               'price': item.price && item.price.effective && item.price.effective.max ? item.price.effective.max : '',
@@ -312,7 +313,7 @@ const gtmTemplate = createTemplate({
             itemsToBePushed.push({
               'item_id': product.uid || product.id || '',
               'item_name': product.name || '',
-              'currency': 'INR',
+              'currency': CURRENCY,
               'item_brand': product.brand && product.brand.name ? product.brand.name : '',
               'price': product.price ? (product.price.effective || product.price.marked || '') : '',
               'quantity': product.quantity ? (product.quantity.current || product.quantity) : 1,
@@ -339,7 +340,7 @@ const gtmTemplate = createTemplate({
             let objectToBePushed = {
               'item_id': product.uid || product.id || '',
               'item_name': product.name || '',
-              'currency': 'INR',
+              'currency': CURRENCY,
               'discount': product.discount || '',
               'item_brand': product.brand && product.brand.name ? product.brand.name : '',
               'price': product.price ? (product.price.effective || product.price.marked || '') : '',
@@ -355,13 +356,13 @@ const gtmTemplate = createTemplate({
           payload.coupon_code = breakup_values && breakup_values.coupon ? breakup_values.coupon.code : '';
           payload.shipping = breakup_values && breakup_values.raw ? breakup_values.raw.delivery_charge : '';
           payload.discount = breakup_values && breakup_values.raw ? breakup_values.raw.discount : '';
-          payload.currency = 'INR';
+          payload.currency = CURRENCY;
           break;
         }
 
         case FPI_EVENTS.ADD_PAYMENT_INFORMATION: {
           const payment_information = eventData;
-          payload.currency = "INR";
+          payload.currency = CURRENCY;
           payload.value = payment_information.value;
           payload.coupon = payment_information.coupon.coupon_code;
           payload.payment_type = payment_information.payment.payment_type;
@@ -372,7 +373,7 @@ const gtmTemplate = createTemplate({
 
         case FPI_EVENTS.ADD_ADDRESS_INFORMATION: {
           const payment_information = eventData;
-          payload.currency = "INR";
+          payload.currency = CURRENCY;
           payload.value = payment_information.value;
           payload.coupon = payment_information.coupon.coupon_code;
           payload.pincode = payment_information.pincode;
@@ -395,7 +396,7 @@ const gtmTemplate = createTemplate({
             itemsToBePushed.push({
               'item_id': product.uid || product.id || '',
               'item_name': product.name || '',
-              'currency': 'INR',
+              'currency': CURRENCY,
               'discount': product.discount || '',
               'item_brand': product.brand && product.brand.name ? product.brand.name : '',
               'price': product.price ? (product.price.effective || product.price.marked || '') : '',
@@ -424,7 +425,7 @@ const gtmTemplate = createTemplate({
             let objectToBePushed = {
               'item_id': product.uid || product.id || '',
               'item_name': product.name || '',
-              'currency': 'INR',
+              'currency': CURRENCY,
               'discount': product.discount || '',
               'item_brand': product.brand && product.brand.name ? product.brand.name : '',
               'price': product.price ? (product.price.effective || product.price.marked || '') : '',
@@ -433,7 +434,7 @@ const gtmTemplate = createTemplate({
             };
             itemsToBePushed.push(objectToBePushed);
           });
-          payload.currency = 'INR';
+          payload.currency = CURRENCY;
           payload.value = breakup_values_raw ? breakup_values_raw.subtotal : '';
           payload.items = itemsToBePushed;
           break;
@@ -459,7 +460,7 @@ const gtmTemplate = createTemplate({
               'item_category': item_category,
               'price': !isNaN(price * quantity) ? (price * quantity).toFixed(2) : '',
               'quantity': quantity,
-              'currency': 'INR'
+              'currency': CURRENCY
             };
           });
           payload.cart_id = cart_id;
@@ -472,7 +473,7 @@ const gtmTemplate = createTemplate({
           payload.transaction_id = order_data.order_id;
           payload.value = order_data.breakup_values_raw.total;
           payload.shipping = order_data.breakup_values_raw.delivery_charges;
-          payload.currency = 'INR';
+          payload.currency = CURRENCY;
           payload.coupon = order_data.breakup_values_raw.coupon;
           payload.items = order_data.items.map(product => {
             return {
