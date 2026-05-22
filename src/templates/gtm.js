@@ -96,6 +96,7 @@ const gtmTemplate = createTemplate({
 
   const consumeGtmEvent = () => {
     const CURRENCY = '{{currency}}' || 'INR';
+    console.log('[GTM] Currency injected:', CURRENCY);
     const FPI_EVENTS = {
       // USER
       LOG_IN: 'user.login',
